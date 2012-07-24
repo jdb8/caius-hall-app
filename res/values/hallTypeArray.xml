@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+ <resources>
+   <string-array name="listOptions">
+     <item>Always first, every day</item>
+     <item>Always formal, every day</item>
+     <item>Advanced settings (per day)</item>
+     </string-array>
+
+   <string-array name="listValues">
+     <item>alwaysFirst</item>
+     <item>alwaysFormal</item>
+     <item>advanced</item>
+   </string-array>
+ </resources>

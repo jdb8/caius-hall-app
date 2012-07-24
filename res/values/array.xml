@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+ <resources>
+   <string-array name="hallOptions">
+     <item>First</item>
+     <item>Formal</item>
+     <item>No hall</item>
+     </string-array>
+     
+   <string-array name="hallOptionsSat">
+     <item>Cafeteria</item>
+     <item>No hall</item>
+     </string-array>
+
+   <string-array name="hallValues">
+     <item>first</item>
+     <item>formal</item>
+     <item>noHall</item>
+   </string-array>
+   
+   <string-array name="hallValuesSat">
+     <item>first</item>
+     <item>noHall</item>
+     </string-array>
+ </resources>

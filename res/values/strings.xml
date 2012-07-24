@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="hello">Hello World, HallAppActivity!</string>
+    <string name="app_name">HallApp</string>
+    <string name="crsidText">Enter your CRSid here</string>
+    <string name="loginButtonText">Login</string>
+    <string name="preLoginInfo">Before accessing your hall account, you\'ll need to login. You should only need to do this once, until you want to explicitly log out.</string>
+    <string name="password">Password</string>
+    <string name="inline_preferences">inline_preferences</string>
+    <string name="title_checkbox_preference">title_checkbox_preference</string>
+    <string name="summary_checkbox_preference">summary_checkbox_preference</string>
+    <string name="title_switch_preference">title_switch_preference</string>
+    <string name="summary_switch_preference">summary_switch_preference</string>
+    <string name="dialog_based_preferences">dialog_based_preferences</string>
+    <string name="dialog_title_edittext_preference">dialog_title_edittext_preference</string>
+    <string name="title_edittext_preference">title_edittext_preference</string>
+    <string name="summary_edittext_preference">summary_edittext_preference</string>
+
+</resources>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+ <PreferenceCategory
+   android:summary="Username and password information"
+   android:title="Login information" >
+  <EditTextPreference
+     android:key="crsid"
+     android:title="CRSid" />
+  <EditTextPreference
+     android:key="password"
+     android:title="Password" 
+     android:inputType="textPassword" />
+ </PreferenceCategory>
+
+ <PreferenceCategory
+   android:summary="Booking information"
+   android:title="Settings" >
+  <CheckBoxPreference
+     android:key="veggie"
+     android:title="Vegetarian" android:summary="All meals will be booked as vegetarian by default"/>
+  <CheckBoxPreference
+     android:key="autoHall"
+     android:summary="Turn automatic hall booking on or off"
+     android:title="Auto Hall"/>
+
+  <ListPreference
+     android:entries="@array/hallOptions"
+     android:entryValues="@array/hallValues"
+     android:key="hallType"
+     android:summary="Always first"
+     android:title="Choose Hall" android:defaultValue="alwaysFirst" android:dependency="autoHall"/>
+ </PreferenceCategory>
+ <PreferenceCategory android:title="Weekdays">
+     <ListPreference android:entries="@array/hallOptions" android:entryValues="@array/hallValues" android:title="Monday" android:summary="No hall" android:key="hallTypeMonday" android:defaultValue="noHall" android:dependency="autoHall"/><ListPreference android:entries="@array/hallOptions" android:entryValues="@array/hallValues" android:title="Tuesday" android:summary="No hall" android:key="hallTypeTuesday" android:defaultValue="noHall" android:dependency="autoHall"/><ListPreference android:entries="@array/hallOptions" android:entryValues="@array/hallValues" android:title="Wednesday" android:summary="No hall" android:key="hallTypeWednesday" android:defaultValue="noHall" android:dependency="autoHall"/><ListPreference android:entries="@array/hallOptions" android:entryValues="@array/hallValues" android:title="Thursday" android:summary="No hall" android:key="hallTypeThursday" android:defaultValue="noHall" android:dependency="autoHall"/><ListPreference android:entries="@array/hallOptions" android:entryValues="@array/hallValues" android:title="Friday" android:summary="No hall" android:key="hallTypeFriday" android:defaultValue="noHall" android:dependency="autoHall"/><ListPreference android:entries="@array/hallOptionsSat" android:entryValues="@array/hallValuesSat" android:title="Saturday" android:summary="No hall" android:key="hallTypeSaturday" android:defaultValue="noHall" android:dependency="autoHall"/><ListPreference android:entries="@array/hallOptions" android:entryValues="@array/hallValues" android:title="Sunday" android:summary="No hall" android:key="hallTypeSunday" android:defaultValue="noHall" android:dependency="autoHall"/>
+ </PreferenceCategory>
+</PreferenceScreen>
