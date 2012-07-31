@@ -34,8 +34,8 @@ Icon?
 Thumbs.db
 
 
-# Eclipse #
+# Eclipse # -- actually keep these, saves trouble of adding to a new system
 ######################
-.classpath
-.project
-.metadata
+#.classpath
+#.project
+#.metadata
