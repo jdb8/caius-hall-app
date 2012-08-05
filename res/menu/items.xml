@@ -7,5 +7,8 @@
     <item android:id="@+id/menu_preferences"
           android:icon="@drawable/ic_menu_preferences"
           android:title="Preferences"
+          android:showAsAction="ifRoom" /><item android:id="@+id/menu_print_settings"
+          android:icon="@drawable/ic_launcher"
+          android:title="Print settings (DEV)"
           android:showAsAction="ifRoom" />
 </menu>
