@@ -77,6 +77,7 @@ public class DisplayHallInfoActivity extends Activity {
     private Date selectedDay = null;
     private long selectedWordId = -1L;
     
+    private String baseURL = "http://192.168.0.9:8888/";
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
     
     private static final SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
@@ -118,7 +119,7 @@ public class DisplayHallInfoActivity extends Activity {
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
         } else {
-        	new LoginTask().execute(crsid, password);
+        	new LoginAndPullTask().execute(crsid, password);
         }
         
     }
@@ -140,6 +141,8 @@ public class DisplayHallInfoActivity extends Activity {
             
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
+        } else if (!loggedIn) {
+        	new LoginAndPullTask().execute(crsid, password);
         }
         
         
@@ -219,6 +222,7 @@ public class DisplayHallInfoActivity extends Activity {
     	private Date day;
     	private boolean firstHall;
     	private boolean vegetarian;
+    	private ProgressDialog dialog;
     	
     	protected BookHallTask(Date day, boolean firstHall, boolean veggie){
     		this.day = day;
@@ -233,21 +237,21 @@ public class DisplayHallInfoActivity extends Activity {
 		}
 
 		@Override
-		protected void onPreExecute() {
-			// TODO Auto-generated method stub
-			super.onPreExecute();
-		}
+        protected void onPreExecute() {
+            dialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
+                    "Booking...", true);
+        }
 
 		@Override
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
 			if (!result){
 				localUIToast("Something went wrong");
-				return;
 			} else {
 				localPutHallBooking(globalSettings, day, firstHall, vegetarian);
 	    		localUIUpdateBookingStatus();
-			}   		
+			} 
+			dialog.cancel();
 		}
         
         
@@ -337,22 +341,14 @@ public class DisplayHallInfoActivity extends Activity {
         return EntityUtils.toString(entity, HTTP.UTF_8);
     } 
     
-    private class LoginTask extends AsyncTask<String, Integer, String> {
+    private class LoginAndPullTask extends AsyncTask<String, Integer, String> {
         
         private ProgressDialog dialog;
         
         @Override
         protected String doInBackground(String... args) {
         	String result = netLogin(args[0], args[1]);
-        	try {
-				netPullBookings(mealBookingIndexHtml);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ParseException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+        	
         	
             return result;
         }
@@ -371,9 +367,8 @@ public class DisplayHallInfoActivity extends Activity {
 
         @Override
         protected void onPostExecute(String result) {
-        	localUIUpdateDatesShown();
-            localUIUpdateBookingStatus();
             dialog.cancel();
+            new PullBookingsTask().execute(baseURL);
             localUIToast(result);
         }
 
@@ -421,8 +416,51 @@ public class DisplayHallInfoActivity extends Activity {
         }               
         
     }
+
+    private class PullBookingsTask extends AsyncTask<String, Integer, Boolean> {
+    	
+    	private ProgressDialog dialog;
+    	
+		@Override
+		protected Boolean doInBackground(String... params) {
+			
+			try {
+				return netPullBookings(params[0]);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			}
+		}
+
+		@Override
+        protected void onPreExecute() {
+            dialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
+                    "Fetching bookings from server", true);
+        }
+
+		@Override
+		protected void onPostExecute(Boolean result) {
+			super.onPostExecute(result);
+			if (!result){
+				localUIToast("Something went wrong");
+				return;
+			} else {
+				localUIUpdateDatesShown();
+    			localUIUpdateBookingStatus();
+    			dialog.cancel();
+			}
+		}
+        
+
+        
+    }
     
-    private boolean netPullBookings(String html) throws IOException, ParseException{
+    private boolean netPullBookings(String url) throws IOException, ParseException{
     	
     	if (!loggedIn){
     		return false;
@@ -432,16 +470,16 @@ public class DisplayHallInfoActivity extends Activity {
     	
     	//When system is live use real base
     	//String base = "https://www.cai.cam.ac.uk/mealbookings/";
-    	String base = "http://192.168.0.9:8888/";
+    	
     	//Document doc = Jsoup.parse(html);
-    	Document doc = Jsoup.connect(base).get();
+    	Document doc = Jsoup.connect(url).get();
     	String linkSelector = "table.list:eq(3) a:contains(View/Edit) ";
     	Elements links = doc.select(linkSelector);
     	
     	ArrayList<String> bookingDates = new ArrayList<String>();
     	
     	for (Element link : links){
-    		Document page = Jsoup.connect(base + link.attr("href")).get();
+    		Document page = Jsoup.connect(url + link.attr("href")).get();
 
     		String date = page.select("table.list td:contains(Date) ~ td").first().text();
     		Date theDate = formatPretty.parse(date);
@@ -499,9 +537,14 @@ public class DisplayHallInfoActivity extends Activity {
                 startActivity(intent);
                 break;
         case R.id.menu_refresh:
-                String crsid = globalSettings.getString("crsid", "");
-                String password = globalSettings.getString("password", "");
-                new LoginTask().execute(crsid, password);
+        		if (!loggedIn){
+        			String crsid = globalSettings.getString("crsid", "");
+                    String password = globalSettings.getString("password", "");
+                    new LoginAndPullTask().execute(crsid, password);
+        		} else {
+        			new PullBookingsTask().execute(baseURL);        			
+        		}
+                
         case R.id.menu_print_settings:
         		Log.i("GLOBALSETTINGS", globalSettings.getAll().toString());
         		Log.i("DEV", httpContext.toString());
