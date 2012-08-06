@@ -34,7 +34,7 @@ public class MyListAdapter extends BaseAdapter {
 
     @Override
     public Object getItem(int position) {
-        SimpleDateFormat format = new SimpleDateFormat("EEEE, dd MMMM yyyy");        
+        SimpleDateFormat format = DisplayHallInfoActivity.formatPretty;       
         try {
             return format.parse(values.get(position));
         } catch (ParseException e) {

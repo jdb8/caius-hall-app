@@ -2,6 +2,7 @@ package com.joebateson.hallApp;
 
 import java.io.IOException;
 import java.net.URL;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,6 +10,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -77,13 +80,14 @@ public class DisplayHallInfoActivity extends Activity {
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
     
     private static final SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
-    private static final SimpleDateFormat formatPretty = new SimpleDateFormat("EEEE, dd MMMM yyyy");
+    protected static final SimpleDateFormat formatPretty = new SimpleDateFormat("EEEE d MMMM yyyy");
     
     private SharedPreferences globalSettings;
     private SharedPreferences.Editor globalSettingsEditor;
     private static HttpClient httpClient;
     private static HttpContext httpContext;
-    private static CookieStore cookieStore;    
+    private static CookieStore cookieStore;
+    private static boolean loggedIn = false;
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -99,9 +103,23 @@ public class DisplayHallInfoActivity extends Activity {
             Intent startServiceIntent = new Intent(this, HallService.class);
             startService(startServiceIntent);
         }
-         
-        updateValues();
-        updateDetails();
+        
+        String crsid = globalSettings.getString("crsid", null);
+        String password = globalSettings.getString("password", null);
+        
+        if (crsid == null || password == null) {
+            Context context = getApplicationContext();
+            CharSequence text = "Please enter your CRSid and password";
+            int duration = Toast.LENGTH_LONG;
+
+            Toast toast = Toast.makeText(context, text, duration);
+            toast.show();
+            
+            Intent intent = new Intent(this, PrefsActivity.class);
+            startActivity(intent);
+        } else {
+        	new LoginTask().execute(crsid, password);
+        }
         
     }
     
@@ -122,10 +140,6 @@ public class DisplayHallInfoActivity extends Activity {
             
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
-        } else {
-            //new LoginTask().execute(crsid, password);
-            //updateValues();
-            //updateDetails();
         }
         
         
@@ -150,23 +164,22 @@ public class DisplayHallInfoActivity extends Activity {
     @Override 
     public boolean onContextItemSelected(MenuItem item){ 
         switch (item.getItemId()) {
-        case 1:
-                putHallBooking(globalSettings, selectedDay, true, globalSettings.getBoolean("veggie", false));
-                updateDetails();
+        case 1:	
+        		new BookHallTask(selectedDay, true, globalSettings.getBoolean("veggie", false)).execute();                
                 break;
         case 2: 
-                putHallBooking(globalSettings, selectedDay, false, globalSettings.getBoolean("veggie", false));
-                updateDetails();
+        		new BookHallTask(selectedDay, false, globalSettings.getBoolean("veggie", false)).execute();
                 break;
         case 3: 
-                cancelHallBooking(globalSettings, selectedDay);
-                updateDetails();
+        		// TODO: cancel online as well as locally
+                localCancelHallBooking(globalSettings, selectedDay);
+                localUIUpdateBookingStatus();
                 break;
         } 
         return false; 
     } 
     
-    protected void toast(String message) {
+    protected void localUIToast(String message) {
         Context context = getApplicationContext();
         CharSequence text = message;
         int duration = Toast.LENGTH_LONG;
@@ -175,7 +188,7 @@ public class DisplayHallInfoActivity extends Activity {
         toast.show();
     }
     
-    private void updateValues() {
+    private void localUIUpdateDatesShown() {
         values = new ArrayList<String>();        
         Calendar day = Calendar.getInstance();
         Date date = day.getTime();
@@ -188,12 +201,12 @@ public class DisplayHallInfoActivity extends Activity {
         lv.setAdapter(listAdapter);
     }
     
-    private void updateDetails() {
+    private void localUIUpdateBookingStatus() {
         details = new ArrayList<String>();
         Calendar day = Calendar.getInstance();
         Date date = day.getTime();
         for (int i = 0; i<7; i++) {
-            details.add(getHallBooking(globalSettings, date));
+            details.add(localGetHallBooking(globalSettings, date));
             day.roll(Calendar.DAY_OF_MONTH, 1);
             date = day.getTime();           
         }
@@ -201,47 +214,121 @@ public class DisplayHallInfoActivity extends Activity {
         lv.setAdapter(listAdapter);
     }
     
-    private static void putHallBooking(SharedPreferences settings, Date day, boolean firstHall, boolean vegetarian) {
-        //bookHall(null, firstHall, vegetarian);
-        String veggie = vegetarian ? " - Vegetarian" : "";
-        String hallType = firstHall ? "First Hall" + veggie : "Formal Hall" + veggie;
-        SharedPreferences.Editor editor = settings.edit();
-        editor.putString(format.format(day), hallType);
-        editor.commit();
+    private class BookHallTask extends AsyncTask<String, Void, Boolean> {
+    	
+    	private Date day;
+    	private boolean firstHall;
+    	private boolean vegetarian;
+    	
+    	protected BookHallTask(Date day, boolean firstHall, boolean veggie){
+    		this.day = day;
+    		this.firstHall = firstHall;
+    		this.vegetarian = veggie;
+    	}
+    	
+		@Override
+		protected Boolean doInBackground(String... params) {
+			
+			return netBookHall(day, firstHall, vegetarian);
+		}
+
+		@Override
+		protected void onPreExecute() {
+			// TODO Auto-generated method stub
+			super.onPreExecute();
+		}
+
+		@Override
+		protected void onPostExecute(Boolean result) {
+			super.onPostExecute(result);
+			if (!result){
+				localUIToast("Something went wrong");
+				return;
+			} else {
+				localPutHallBooking(globalSettings, day, firstHall, vegetarian);
+	    		localUIUpdateBookingStatus();
+			}   		
+		}
+        
+        
+
+        
     }
     
-    private static String getHallBooking(SharedPreferences settings, Date day) {       
+    private static boolean netBookHall(Date date, boolean firstHall, boolean vegetarian) {
+    	
+    	if (!loggedIn){
+    		return false;
+    	}
+    	
+    	
+        int year = date.getYear();
+        String month = new String[] { "01", "02", "03", "04","05", "06", "07", "08", "09", "10", "11", "12" } [ date.getMonth() ];
+        int day = date.getDay();
+        String format = String.format("%%0%dd", 2);
+        String sDay = String.format(format, day);        
+        int hallCode = 140;
+        String veggie = "0";
+        if (!firstHall) hallCode = 141;
+        if (vegetarian) veggie = "1";        
+        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
+        
+        List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(5);
+        nameValuePairs.add(new BasicNameValuePair("guests", "0"));
+        nameValuePairs.add(new BasicNameValuePair("guests_names", ""));
+        nameValuePairs.add(new BasicNameValuePair("vegetarians", veggie));
+        nameValuePairs.add(new BasicNameValuePair("requirements", ""));
+        nameValuePairs.add(new BasicNameValuePair("update", "Create"));
+        
+        try {
+            netPostData(url, nameValuePairs);
+            return true;
+        } catch (ClientProtocolException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return false;
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return false;
+        }          
+    }
+    
+    private static String[] localPutHallBooking(SharedPreferences settings, Date day, boolean firstHall, boolean vegetarian) {
+        String veggie = vegetarian ? " - Vegetarian" : "";
+        String hallType = firstHall ? "First Hall" + veggie : "Formal Hall" + veggie;
+        String dayString = format.format(day);
+        SharedPreferences.Editor editor = settings.edit();
+        
+        editor.putString(dayString, hallType);
+        editor.commit();
+        
+        String[] result = new String[2];
+        result[0] = dayString;
+        result[1] = hallType;
+        
+        return result;
+    }
+    
+    private static String localGetHallBooking(SharedPreferences settings, Date day) {       
         return settings.getString(format.format(day), "No Hall");        
     }
     
-    private static void cancelHallBooking(SharedPreferences settings, Date day) {
+    private static void localCancelHallBooking(SharedPreferences settings, Date day) {
         String dayS = format.format(day);
         SharedPreferences.Editor editor = settings.edit();
         editor.remove(dayS);
         editor.commit();
     }
     
-    private ArrayList<String> jsonArrayToList(JSONArray jsonArray) {
-        ArrayList<String> list = new ArrayList<String>();
-        for (int i = 0; i < jsonArray.length(); i++) {
-            try {
-                list.add(jsonArray.getString(i));
-            } catch (JSONException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-        return list;
-    }
-    
-    public String getData(String url) throws ClientProtocolException, IOException {
+    public String netGetData(String url) throws ClientProtocolException, IOException {
         HttpGet get = new HttpGet(url);
         HttpResponse resp = httpClient.execute(get, httpContext);
         HttpEntity entity = resp.getEntity();
         return EntityUtils.toString(entity, HTTP.UTF_8);
     } 
     
-    public static String postData(String url, List<NameValuePair> nameValuePairs) throws ClientProtocolException, IOException {
+    public static String netPostData(String url, List<NameValuePair> nameValuePairs) throws ClientProtocolException, IOException {
         HttpPost post = new HttpPost(url);
         post.setEntity(new UrlEncodedFormEntity(nameValuePairs));
         
@@ -250,14 +337,24 @@ public class DisplayHallInfoActivity extends Activity {
         return EntityUtils.toString(entity, HTTP.UTF_8);
     } 
     
-    
     private class LoginTask extends AsyncTask<String, Integer, String> {
         
         private ProgressDialog dialog;
         
         @Override
-        protected String doInBackground(String... args) {           
-            return login(args[0], args[1]);
+        protected String doInBackground(String... args) {
+        	String result = netLogin(args[0], args[1]);
+        	try {
+				netPullBookings(mealBookingIndexHtml);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        	
+            return result;
         }
         
         @Override
@@ -274,15 +371,16 @@ public class DisplayHallInfoActivity extends Activity {
 
         @Override
         protected void onPostExecute(String result) {
+        	localUIUpdateDatesShown();
+            localUIUpdateBookingStatus();
             dialog.cancel();
-            toast(result);
+            localUIToast(result);
         }
 
         
     }
-    
-    
-    private String login(String crsid, String password) {       
+     
+    private String netLogin(String crsid, String password) {       
         
         try {
             httpClient = new DefaultHttpClient();
@@ -305,12 +403,12 @@ public class DisplayHallInfoActivity extends Activity {
             HttpResponse response = httpClient.execute(post, httpContext);
             HttpEntity entity2 = response.getEntity();
             mealBookingIndexHtml = EntityUtils.toString(entity2, HTTP.UTF_8);
-            Log.i(TAG, mealBookingIndexHtml);
             Document doc = Jsoup.parse(mealBookingIndexHtml);
             Element error = doc.select("span.error").first();
             if (error != null) {
                 return error.text();
             } else {
+            	loggedIn = true;
                 return "noRavenError";
             }
             
@@ -324,44 +422,52 @@ public class DisplayHallInfoActivity extends Activity {
         
     }
     
-    private String parse(String html) {
-        Document doc = Jsoup.parse(html);
-        Elements h1 = doc.select("h1");
-        Element h1Element = h1.first();
-        String h1Text = h1Element.text();
-        
-        return h1Text;
-    }
-    
-    private static void bookHall(Calendar calendar, boolean firstHall, boolean vegetarian) {
-        int year = calendar.get(Calendar.YEAR);
-        String month = new String[] { "01", "02", "03", "04","05", "06", "07", "08", "09", "10", "11", "12" } [ calendar.get( GregorianCalendar.MONTH ) ];
-        int day = calendar.get(Calendar.DAY_OF_MONTH);
-        String format = String.format("%%0%dd", 2);
-        String sDay = String.format(format, day);        
-        int hallCode = 140;
-        String veggie = "0";
-        if (!firstHall) hallCode = 141;
-        if (vegetarian) veggie = "1";        
-        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
-        
-        List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(5);
-        nameValuePairs.add(new BasicNameValuePair("guests", "0"));
-        nameValuePairs.add(new BasicNameValuePair("guests_names", ""));
-        nameValuePairs.add(new BasicNameValuePair("vegetarians", veggie));
-        nameValuePairs.add(new BasicNameValuePair("requirements", ""));
-        nameValuePairs.add(new BasicNameValuePair("update", "Create"));
-        
-        try {
-            String html = postData(url, nameValuePairs);
-            Log.i(TAG, html);
-        } catch (ClientProtocolException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }          
+    private boolean netPullBookings(String html) throws IOException, ParseException{
+    	
+    	if (!loggedIn){
+    		return false;
+    	}
+    	
+    	
+    	
+    	//When system is live use real base
+    	//String base = "https://www.cai.cam.ac.uk/mealbookings/";
+    	String base = "http://192.168.0.9:8888/";
+    	//Document doc = Jsoup.parse(html);
+    	Document doc = Jsoup.connect(base).get();
+    	String linkSelector = "table.list:eq(3) a:contains(View/Edit) ";
+    	Elements links = doc.select(linkSelector);
+    	
+    	ArrayList<String> bookingDates = new ArrayList<String>();
+    	
+    	for (Element link : links){
+    		Document page = Jsoup.connect(base + link.attr("href")).get();
+
+    		String date = page.select("table.list td:contains(Date) ~ td").first().text();
+    		Date theDate = formatPretty.parse(date);
+    		Log.i("hallbooking", "found elements");
+    		Log.i("hallbooking", localGetHallBooking(globalSettings, theDate));
+    		String hallType = page.select("h1").first().text();
+    		Boolean firstHall = hallType.indexOf("First") != -1;
+    		Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
+    		String vString = veggie ? " - Vegetarian" : "";
+    		
+    		bookingDates.add(localPutHallBooking(globalSettings, theDate, firstHall, veggie)[0]);
+    	}
+    	
+    	//clear all local bookings that were not on the server
+    	Set<String> allSettingKeys = globalSettings.getAll().keySet();
+    	
+    	
+    	for (String key : allSettingKeys){
+    		if (key.indexOf("20") != -1 && !(bookingDates.contains(key))){
+    			globalSettingsEditor.remove(key);
+    		}
+    	}
+    	globalSettingsEditor.commit();
+    	
+    	return true;
+    	
     }   
     
     protected static Calendar futureDay(int requiredDay) {
@@ -396,8 +502,10 @@ public class DisplayHallInfoActivity extends Activity {
                 String crsid = globalSettings.getString("crsid", "");
                 String password = globalSettings.getString("password", "");
                 new LoginTask().execute(crsid, password);
-                updateValues();
-                updateDetails();
+        case R.id.menu_print_settings:
+        		Log.i("GLOBALSETTINGS", globalSettings.getAll().toString());
+        		Log.i("DEV", httpContext.toString());
+        		Log.i("DEV", httpClient.toString());
         } 
         return false; 
     } 
