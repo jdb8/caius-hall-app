@@ -78,10 +78,10 @@ public class MyListAdapter extends BaseAdapter {
         
         if (this.details.get(position).equals("No Hall")) {
             holder.image.setImageResource(R.drawable.x_grey);
-        } else if (this.details.get(position).equals("First Hall")) {
-            holder.image.setImageResource(R.drawable.check_cyan);
-        } else {
+        } else if (this.details.get(position).indexOf("Formal Hall") != -1) {
             holder.image.setImageResource(R.drawable.check_blue);
+        } else {
+            holder.image.setImageResource(R.drawable.check_cyan);
         }
    
         return vi;
