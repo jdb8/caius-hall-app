@@ -103,36 +103,58 @@ public class DisplayHallInfoActivity extends Activity {
     private static boolean loggedIn = false;
     
     @Override
+    public Object onRetainNonConfigurationInstance() {
+        final Object[] data = new Object[5];
+        data[0] = httpClient;
+        data[1] = httpContext;
+        data[2] = cookieStore;
+        return data;
+    }
+    
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.hall_list); 
+        
         lv = (ListView) findViewById(R.id.lvResult);
         registerForContextMenu(lv);
         
         globalSettings = PreferenceManager.getDefaultSharedPreferences(this);
         globalSettingsEditor = globalSettings.edit();
-        
-        if (globalSettings.getBoolean("autoHall", false)) {
-            Intent startServiceIntent = new Intent(this, HallService.class);
-            startService(startServiceIntent);
-        }
-        
-        String crsid = globalSettings.getString("crsid", null);
-        String password = globalSettings.getString("password", null);
-        
-        if (crsid == null || password == null) {
-            Context context = getApplicationContext();
-            CharSequence text = "Please enter your CRSid and password";
-            int duration = Toast.LENGTH_LONG;
-
-            Toast toast = Toast.makeText(context, text, duration);
-            toast.show();
-            
-            Intent intent = new Intent(this, PrefsActivity.class);
-            startActivity(intent);
+             
+        final Object[] data = (Object[]) getLastNonConfigurationInstance();
+        if (data != null) {
+            httpClient = (HttpClient) data[0];
+            httpContext = (HttpContext) data[1];
+            cookieStore = (CookieStore) data[2];
+            localUIUpdateDatesShown();
+            localUIUpdateBookingStatus();
         } else {
-        	new LoginAndPullTask().execute(crsid, password);
+        	
+            if (globalSettings.getBoolean("autoHall", false)) {
+                Intent startServiceIntent = new Intent(this, HallService.class);
+                startService(startServiceIntent);
+            }
+            
+//            String crsid = globalSettings.getString("crsid", null);
+//            String password = globalSettings.getString("password", null);
+            
+//            if (crsid == null || password == null) {
+//                Context context = getApplicationContext();
+//                CharSequence text = "Please enter your CRSid and password";
+//                int duration = Toast.LENGTH_LONG;
+//
+//                Toast toast = Toast.makeText(context, text, duration);
+//                toast.show();
+//                
+//                Intent intent = new Intent(this, PrefsActivity.class);
+//                startActivity(intent);
+//            } else {
+//            	//new LoginAndPullTask().execute(crsid, password);
+//            }
         }
+        
+        
         
     }
     
