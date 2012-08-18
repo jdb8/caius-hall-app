@@ -10,7 +10,6 @@ public class HallService extends Service {
     
     private boolean isActive = false;
     
-    @SuppressWarnings("deprecation")
     private void run() {
         if (!isActive) {
           isActive=true;
