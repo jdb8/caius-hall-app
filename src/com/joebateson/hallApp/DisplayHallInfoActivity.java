@@ -258,7 +258,7 @@ public class DisplayHallInfoActivity extends Activity {
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
 			if (!result){
-				localUIToast("Something went wrong");
+				localUIToast("Something went wrong in BookHallTask");
 			} else {
 				localPutHallBooking(globalSettings, day, firstHall, vegetarian);
 	    		localUIUpdateBookingStatus();
@@ -518,38 +518,49 @@ public class DisplayHallInfoActivity extends Activity {
     	
     	//Document doc = Jsoup.parse(html);
     	Document doc = Jsoup.connect(url).get();
-    	String linkSelector = "table.list:eq(3) a:contains(View/Edit) ";
-    	Elements links = doc.select(linkSelector);
     	
-    	ArrayList<String> bookingDates = new ArrayList<String>();
-    	
-    	for (Element link : links){
-    		Document page = Jsoup.connect(url + link.attr("href")).get();
-
-    		String date = page.select("table.list td:contains(Date) ~ td").first().text();
-    		Date theDate = formatPretty.parse(date);
-    		Log.i("hallbooking", "found elements");
-    		Log.i("hallbooking", localGetHallBooking(globalSettings, theDate));
-    		String hallType = page.select("h1").first().text();
-    		Boolean firstHall = hallType.indexOf("First") != -1;
-    		Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
-    		String vString = veggie ? " - Vegetarian" : "";
-    		
-    		bookingDates.add(localPutHallBooking(globalSettings, theDate, firstHall, veggie)[0]);
+    	if (doc == null) {
+    		return false;
+    	} else {
+    		String linkSelector = "table.list:eq(3) a:contains(View/Edit) ";
+        	Elements links = doc.select(linkSelector);
+        	
+        	ArrayList<String> bookingDates = new ArrayList<String>();
+        	
+        	for (Element link : links){
+        		Document page = Jsoup.connect(url + link.attr("href")).get();
+        		if (page == null) {
+        			return false;
+        		} else {
+        			String date = page.select("table.list td:contains(Date) ~ td").first().text();
+            		Date theDate = formatPretty.parse(date);
+            		Log.i("hallbooking", "found elements");
+            		Log.i("hallbooking", localGetHallBooking(globalSettings, theDate));
+            		String hallType = page.select("h1").first().text();
+            		Boolean firstHall = hallType.indexOf("First") != -1;
+            		Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
+            		String vString = veggie ? " - Vegetarian" : "";
+            		
+            		bookingDates.add(localPutHallBooking(globalSettings, theDate, firstHall, veggie)[0]);
+        		}
+        		
+        	}
+        	
+        	//clear all local bookings that were not on the server
+        	Set<String> allSettingKeys = globalSettings.getAll().keySet();
+        	
+        	
+        	for (String key : allSettingKeys){
+        		if (key.indexOf("20") != -1 && !(bookingDates.contains(key))){
+        			globalSettingsEditor.remove(key);
+        		}
+        	}
+        	globalSettingsEditor.commit();
+        	
+        	return true;
     	}
     	
-    	//clear all local bookings that were not on the server
-    	Set<String> allSettingKeys = globalSettings.getAll().keySet();
     	
-    	
-    	for (String key : allSettingKeys){
-    		if (key.indexOf("20") != -1 && !(bookingDates.contains(key))){
-    			globalSettingsEditor.remove(key);
-    		}
-    	}
-    	globalSettingsEditor.commit();
-    	
-    	return true;
     	
     }   
     
