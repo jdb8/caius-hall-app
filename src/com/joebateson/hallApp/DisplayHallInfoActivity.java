@@ -102,6 +102,10 @@ public class DisplayHallInfoActivity extends Activity {
     private static CookieStore cookieStore;
     private static boolean loggedIn = false;
     
+    private ProgressDialog globalDialog;
+
+	private static ArrayList<AsyncTask> tasks = new ArrayList<AsyncTask>();
+    
     @Override
     public Object onRetainNonConfigurationInstance() {
         final Object[] data = new Object[5];
@@ -177,12 +181,34 @@ public class DisplayHallInfoActivity extends Activity {
             startActivity(intent);
         } else if (!loggedIn) {
         	new LoginAndPullTask().execute(crsid, password);
+        } else {
+        	localUIUpdateDatesShown();
+            localUIUpdateBookingStatus();
         }
         
         
     }
     
-    @Override
+    /* (non-Javadoc)
+	 * @see android.app.Activity#onPause()
+	 */
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		super.onPause();
+		
+		for (AsyncTask task : tasks){
+			task.cancel(true);
+		}
+		
+		if (globalDialog != null) {
+			globalDialog.dismiss();
+		}
+		
+	}
+	
+
+	@Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
 
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
@@ -257,7 +283,6 @@ public class DisplayHallInfoActivity extends Activity {
     	private Date day;
     	private boolean firstHall;
     	private boolean vegetarian;
-    	private ProgressDialog dialog;
     	
     	protected BookHallTask(Date day, boolean firstHall, boolean veggie){
     		this.day = day;
@@ -273,7 +298,8 @@ public class DisplayHallInfoActivity extends Activity {
 
 		@Override
         protected void onPreExecute() {
-            dialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
+			DisplayHallInfoActivity.tasks.add(this);
+            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
                     "Booking...", true);
         }
 
@@ -286,7 +312,8 @@ public class DisplayHallInfoActivity extends Activity {
 				localPutHallBooking(globalSettings, day, firstHall, vegetarian);
 	    		localUIUpdateBookingStatus();
 			} 
-			dialog.dismiss();
+			globalDialog.dismiss();
+			DisplayHallInfoActivity.tasks.remove(this);
 		}
         
         
@@ -378,8 +405,6 @@ public class DisplayHallInfoActivity extends Activity {
     
     private class LoginAndPullTask extends AsyncTask<String, Integer, String> {
         
-        private ProgressDialog dialog;
-        
         @Override
         protected String doInBackground(String... args) {
         	String result = netLogin(args[0], args[1]);
@@ -390,7 +415,8 @@ public class DisplayHallInfoActivity extends Activity {
         
         @Override
         protected void onPreExecute() {
-            dialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
+        	DisplayHallInfoActivity.tasks.add(this);
+            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
                     "Logging in to Caius Hall Booking", true);
         }
         
@@ -402,7 +428,8 @@ public class DisplayHallInfoActivity extends Activity {
 
         @Override
         protected void onPostExecute(String result) {
-            dialog.dismiss();
+            globalDialog.dismiss();
+            DisplayHallInfoActivity.tasks.remove(this);
             new PullBookingsTask().execute(baseURL);
             localUIToast(result);
         }
@@ -452,7 +479,6 @@ public class DisplayHallInfoActivity extends Activity {
             
             //need this to allow connection to close, don't remove
             String needThisHereForSillyReasons = EntityUtils.toString(rp.getEntity(), HTTP.UTF_8);
-            Log.i("HTTP RESPONSE RP", needThisHereForSillyReasons);
             String location = "https://raven.cam.ac.uk/auth/authenticate2.html?ver=1&url=https%3a%2f%2fwww.cai.cam.ac.uk%2fmealbookings%2findex.php";
             
             HttpPost post = new HttpPost(location);
@@ -487,8 +513,6 @@ public class DisplayHallInfoActivity extends Activity {
 
     private class PullBookingsTask extends AsyncTask<String, Integer, Boolean> {
     	
-    	private ProgressDialog dialog;
-    	
 		@Override
 		protected Boolean doInBackground(String... params) {
 			
@@ -507,7 +531,8 @@ public class DisplayHallInfoActivity extends Activity {
 
 		@Override
         protected void onPreExecute() {
-            dialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
+			DisplayHallInfoActivity.tasks.add(this);
+            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "", 
                     "Fetching bookings from server", true);
         }
 
@@ -515,13 +540,13 @@ public class DisplayHallInfoActivity extends Activity {
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
 			if (!result){
-				localUIToast("Something went wrong");
-				return;
+				localUIToast("Something went wrong in onPostExecute");
 			} else {
 				localUIUpdateDatesShown();
     			localUIUpdateBookingStatus();
-    			dialog.dismiss();
 			}
+			DisplayHallInfoActivity.tasks.remove(this);
+			globalDialog.dismiss();
 		}
         
 
@@ -627,7 +652,8 @@ public class DisplayHallInfoActivity extends Activity {
         case R.id.menu_print_settings:
         		Log.i("GLOBALSETTINGS", globalSettings.getAll().toString());
         		Log.i("DEV", httpContext.toString());
-        		Log.i("DEV", httpClient.toString());
+        		Log.i("DEV", httpClient.getParams().toString());
+        		Log.i("DEV", cookieStore.getCookies().toString());
         } 
         return false; 
     } 
