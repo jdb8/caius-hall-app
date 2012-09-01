@@ -209,7 +209,8 @@ public class DisplayHallInfoActivity extends Activity {
                 break;
         case 3: 
         		// TODO: cancel online as well as locally
-                localCancelHallBooking(globalSettings, selectedDay);
+                //localCancelHallBooking(globalSettings, selectedDay);
+        		localUIToast("Cancelling bookings is not implemented yet - sorry!");
                 localUIUpdateBookingStatus();
                 break;
         } 
