@@ -12,7 +12,7 @@ public class MyHallReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context);
         if (settings.getBoolean("autoHall", false)) {
-            Intent startServiceIntent = new Intent(context, HallService.class);
+            Intent startServiceIntent = new Intent(context, AutoHallActiveService.class);
             context.startService(startServiceIntent);
         }        
     }

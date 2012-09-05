@@ -12,7 +12,7 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
-public class HallService extends Service {
+public class AutoHallActiveService extends Service {
     
     private boolean isActive = false;
     

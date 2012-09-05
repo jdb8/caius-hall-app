@@ -1,20 +1,15 @@
 package com.joebateson.hallApp;
 
 import java.io.IOException;
-import java.net.URL;
 import java.security.KeyStore;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
@@ -42,23 +37,16 @@ import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.ListActivity;
-import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.net.wifi.WifiConfiguration.Protocol;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -69,15 +57,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Adapter;
-import android.widget.AdapterView;
 import android.widget.AdapterView.AdapterContextMenuInfo;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.AdapterView.OnItemLongClickListener;
-import android.widget.ArrayAdapter;
-import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class DisplayHallInfoActivity extends Activity {
@@ -90,8 +71,6 @@ public class DisplayHallInfoActivity extends Activity {
     private ArrayList<String> details;
     
     private Date selectedDay = null;
-    private long selectedWordId = -1L;
-    
     private String baseURL = "http://192.168.0.9:8888/";
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
     
@@ -141,7 +120,7 @@ public class DisplayHallInfoActivity extends Activity {
         } else {
         	
             if (globalSettings.getBoolean("autoHall", false)) {
-                Intent startServiceIntent = new Intent(this, HallService.class);
+                Intent startServiceIntent = new Intent(this, AutoHallActiveService.class);
                 startService(startServiceIntent);
             }
             
@@ -222,8 +201,6 @@ public class DisplayHallInfoActivity extends Activity {
         Adapter adapter = listAdapter;
         
         selectedDay = (Date) adapter.getItem(info.position);
-        selectedWordId = info.id;        
-        
         menu.setHeaderTitle(formatPretty.format(selectedDay));        
         
         menu.add(1, 1, 0, "Book first hall");
@@ -334,10 +311,12 @@ public class DisplayHallInfoActivity extends Activity {
     		return false;
     	}
     	
-    	
-        int year = date.getYear();
-        String month = new String[] { "01", "02", "03", "04","05", "06", "07", "08", "09", "10", "11", "12" } [ date.getMonth() ];
-        int day = date.getDay();
+    	Calendar calendar = Calendar.getInstance();
+    	calendar.setTime(date);
+        int year = calendar.get(Calendar.YEAR);
+        String month = new String[] { "01", "02", "03", "04","05", "06", "07", "08", "09", "10", "11", "12" } [ calendar.get(Calendar.MONTH) ];
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+        
         String format = String.format("%%0%dd", 2);
         String sDay = String.format(format, day);        
         int hallCode = 140;
@@ -483,8 +462,7 @@ public class DisplayHallInfoActivity extends Activity {
             HttpGet method = new HttpGet("https://www.cai.cam.ac.uk/mealbookings/index.php");
             HttpResponse rp = httpClient.execute(method, httpContext);
             
-            //need this to allow connection to close, don't remove
-            String needThisHereForSillyReasons = EntityUtils.toString(rp.getEntity(), HTTP.UTF_8);
+            EntityUtils.toString(rp.getEntity(), HTTP.UTF_8);
             String location = "https://raven.cam.ac.uk/auth/authenticate2.html?ver=1&url=https%3a%2f%2fwww.cai.cam.ac.uk%2fmealbookings%2findex.php";
             
             HttpPost post = new HttpPost(location);
@@ -591,8 +569,6 @@ public class DisplayHallInfoActivity extends Activity {
             		String hallType = page.select("h1").first().text();
             		Boolean firstHall = hallType.indexOf("First") != -1;
             		Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
-            		String vString = veggie ? " - Vegetarian" : "";
-            		
             		bookingDates.add(localPutHallBooking(globalSettings, theDate, firstHall, veggie)[0]);
         		}
         		

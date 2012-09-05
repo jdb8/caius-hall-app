@@ -88,10 +88,10 @@ public class PrefsActivity extends PreferenceActivity implements OnSharedPrefere
             Log.i("new autohall value", "" + enabled);
             
             if (enabled) {
-                Intent i = new Intent(this, HallService.class);
+                Intent i = new Intent(this, AutoHallActiveService.class);
                 startService(i);
             } else {
-                stopService(new Intent(this, HallService.class));
+                stopService(new Intent(this, AutoHallActiveService.class));
             }
         }
     }
