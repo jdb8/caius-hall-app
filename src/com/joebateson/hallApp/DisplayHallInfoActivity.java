@@ -13,6 +13,7 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -49,7 +50,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.ListActivity;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -105,6 +108,8 @@ public class DisplayHallInfoActivity extends Activity {
     private ProgressDialog globalDialog;
 
 	private static ArrayList<AsyncTask> tasks = new ArrayList<AsyncTask>();
+	
+	
     
     @Override
     public Object onRetainNonConfigurationInstance() {
@@ -206,6 +211,8 @@ public class DisplayHallInfoActivity extends Activity {
 		}
 		
 	}
+	
+	
 	
 
 	@Override
@@ -321,7 +328,7 @@ public class DisplayHallInfoActivity extends Activity {
         
     }
     
-    private static boolean netBookHall(Date date, boolean firstHall, boolean vegetarian) {
+    protected static boolean netBookHall(Date date, boolean firstHall, boolean vegetarian) {
     	
     	if (!loggedIn){
     		return false;
@@ -348,6 +355,7 @@ public class DisplayHallInfoActivity extends Activity {
         
         try {
             netPostData(url, nameValuePairs);
+            Log.i("DisplayHallInfoActivity", "Booked hall on " + date.toString());
             return true;
         } catch (ClientProtocolException e) {
             // TODO Auto-generated catch block
@@ -360,7 +368,7 @@ public class DisplayHallInfoActivity extends Activity {
         }          
     }
     
-    private static String[] localPutHallBooking(SharedPreferences settings, Date day, boolean firstHall, boolean vegetarian) {
+    protected static String[] localPutHallBooking(SharedPreferences settings, Date day, boolean firstHall, boolean vegetarian) {
         String veggie = vegetarian ? " - Vegetarian" : "";
         String hallType = firstHall ? "First Hall" + veggie : "Formal Hall" + veggie;
         String dayString = format.format(day);
@@ -380,7 +388,7 @@ public class DisplayHallInfoActivity extends Activity {
         return settings.getString(format.format(day), "No Hall");        
     }
     
-    private static void localCancelHallBooking(SharedPreferences settings, Date day) {
+    protected static void localCancelHallBooking(SharedPreferences settings, Date day) {
         String dayS = format.format(day);
         SharedPreferences.Editor editor = settings.edit();
         editor.remove(dayS);
@@ -472,8 +480,6 @@ public class DisplayHallInfoActivity extends Activity {
             cookieStore = new BasicCookieStore();
             httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
             
-            Log.i("netLogin", "gets this far _____");
-            
             HttpGet method = new HttpGet("https://www.cai.cam.ac.uk/mealbookings/index.php");
             HttpResponse rp = httpClient.execute(method, httpContext);
             
@@ -497,14 +503,14 @@ public class DisplayHallInfoActivity extends Activity {
                 return error.text();
             } else {
             	loggedIn = true;
-                return "noRavenError";
+                return "Successfully logged in";
             }
             
         } catch (ClientProtocolException e) {
-            System.out.println("Something went wrong with ClientProtocol");
+            System.out.println("Something went wrong - ClientProtocol");
             return "ClientProtocol error";
         } catch (IOException e) {
-            System.out.println("Something went wrong with IOException");
+            System.out.println("Something went wrong - IOException");
             e.printStackTrace();
             return "IOException error";
         }               
@@ -582,8 +588,6 @@ public class DisplayHallInfoActivity extends Activity {
         		} else {
         			String date = page.select("table.list td:contains(Date) ~ td").first().text();
             		Date theDate = formatPretty.parse(date);
-            		Log.i("hallbooking", "found elements");
-            		Log.i("hallbooking", localGetHallBooking(globalSettings, theDate));
             		String hallType = page.select("h1").first().text();
             		Boolean firstHall = hallType.indexOf("First") != -1;
             		Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
@@ -612,7 +616,7 @@ public class DisplayHallInfoActivity extends Activity {
     	
     }   
     
-    protected static Calendar futureDay(int requiredDay) {
+    protected static Date futureDay(int requiredDay) {
         Calendar requiredDate = new GregorianCalendar();
         int today = requiredDate.get(Calendar.DAY_OF_WEEK);
         while (requiredDay != today) {
@@ -623,7 +627,7 @@ public class DisplayHallInfoActivity extends Activity {
         requiredDate.set(Calendar.MINUTE, 0);
         requiredDate.set(Calendar.SECOND, 0);
         requiredDate.set(Calendar.MILLISECOND, 0);
-        return requiredDate;
+        return requiredDate.getTime();
     }
     
     @Override

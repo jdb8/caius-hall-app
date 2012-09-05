@@ -29,7 +29,10 @@
         </intent-filter>
     </receiver>
     
-    <service android:name="com.joebateson.hallApp.HallService" />
+    <receiver android:name="HallAutoBookReceiver"></receiver>
+    
+    <service android:name="HallService" />
+    <service android:name="HallBookService" />
     
     </application>
     
