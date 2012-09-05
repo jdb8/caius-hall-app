@@ -1,5 +1,6 @@
 package com.joebateson.hallApp;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
@@ -56,7 +57,8 @@ public class PrefsActivity extends PreferenceActivity implements OnSharedPrefere
         updatePreference(key);
     }
     
-    private void updatePreference(String key){
+    @SuppressLint({ "NewApi", "NewApi" })
+	private void updatePreference(String key){
         Preference preference = findPreference(key);
         if (preference instanceof ListPreference){
             ListPreference listPreference = (ListPreference)preference; 
