@@ -67,6 +67,39 @@
             -pre-clean
     -->
     <import file="custom_rules.xml" optional="true" />
+    <!-- Require the git.revision task during pre-build -->
+    <target name="-pre-build" depends="git.revision" />
+ 
+    <!-- Check to see if a git repository exists in the source dir -->
+    <available file=".git" type="dir" property="git.present" />
+ 
+    <!-- Get the git changeset id for tip -->
+    <target name="git.revision" description="Store git revision in ${repository.version}" if="git.present">
+        <exec executable="git" outputproperty="git.revision" failifexecutionfails="false" errorproperty="">
+            <!--<arg value="describe"/>
+            <arg value="tags"/>
+            <arg value="always"/>
+            <arg value="HEAD"/>-->
+            <arg value="log"/>
+            <arg value="-1"/>
+            <arg value="--pretty=format:%H"/>
+        </exec>
+        <condition property="repository.version" value="${git.revision}" else="unknown">
+            <and>
+                <isset property="git.revision"/>
+                <!--<length string="${git.revision}" trim="yes" length="0" when="greater"/>-->
+            </and>
+        </condition>
+        <echo message="Repository version is ${git.revision}" />
+ 
+        <!-- Create property file containing git changeset id -->
+        <propertyfile file="version.properties" comment="The changset id that this app was built from.">
+            <entry key="changeset" value="${git.revision}" />
+        </propertyfile>
+ 
+        <!-- Move property file to app accessible res/raw/ directory -->
+        <move file="version.properties" todir="res/raw/" />
+    </target>
 
     <!-- Import the actual build file.
 
@@ -86,7 +119,7 @@
          In all cases you must update the value of version-tag below to read 'custom' instead of an integer,
          in order to avoid having your file be overridden by tools such as "android update project"
     -->
-    <!-- version-tag: 1 -->
+    <!-- version-tag: custom -->
     <import file="${sdk.dir}/tools/ant/build.xml" />
 
 </project>

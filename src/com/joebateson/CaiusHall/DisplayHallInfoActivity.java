@@ -1,6 +1,7 @@
 package com.joebateson.CaiusHall;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyStore;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -9,6 +10,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -47,8 +49,10 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.Preference;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -88,7 +92,21 @@ public class DisplayHallInfoActivity extends Activity {
 
 	private static ArrayList<AsyncTask> tasks = new ArrayList<AsyncTask>();
 	
-	
+	// Useful method from: http://www.tristanwaddington.com/2011/07/update-hg-or-git-changest-during-android-build/
+	public String getAppChangsetFromPropertiesFile() {
+        Resources resources = getResources();
+ 
+        try {
+            InputStream rawResource = resources.openRawResource(R.raw.version);
+            Properties properties = new Properties();
+            properties.load(rawResource);
+            return properties.getProperty("changeset");
+        } catch (IOException e) {
+            Log.e(TAG, "Cannot load app version properties file", e);
+        }
+ 
+        return null;
+    }
     
     @Override
     public Object onRetainNonConfigurationInstance() {
@@ -102,6 +120,7 @@ public class DisplayHallInfoActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
         setContentView(R.layout.hall_list); 
         
         lv = (ListView) findViewById(R.id.lvResult);
@@ -109,6 +128,9 @@ public class DisplayHallInfoActivity extends Activity {
         
         globalSettings = PreferenceManager.getDefaultSharedPreferences(this);
         globalSettingsEditor = globalSettings.edit();
+        
+        globalSettingsEditor.putString("app_revision", this.getAppChangsetFromPropertiesFile());
+        globalSettingsEditor.commit();
              
         final Object[] data = (Object[]) getLastNonConfigurationInstance();
         if (data != null) {
@@ -646,6 +668,7 @@ public class DisplayHallInfoActivity extends Activity {
         		Log.i("DEV", httpContext.toString());
         		Log.i("DEV", httpClient.getParams().toString());
         		Log.i("DEV", cookieStore.getCookies().toString());
+        		localUIToast("revision: " + globalSettings.getString("app_revision", "unknown"));
         } 
         return false; 
     } 
