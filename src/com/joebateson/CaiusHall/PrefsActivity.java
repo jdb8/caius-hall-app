@@ -1,4 +1,4 @@
-package com.joebateson.hallApp;
+package com.joebateson.CaiusHall;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;

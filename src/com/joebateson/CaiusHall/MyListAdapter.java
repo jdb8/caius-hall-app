@@ -1,4 +1,4 @@
-package com.joebateson.hallApp;
+package com.joebateson.CaiusHall;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

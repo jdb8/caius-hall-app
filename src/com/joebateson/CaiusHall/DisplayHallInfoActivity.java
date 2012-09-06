@@ -1,4 +1,4 @@
-package com.joebateson.hallApp;
+package com.joebateson.CaiusHall;
 
 import java.io.IOException;
 import java.security.KeyStore;
@@ -63,7 +63,7 @@ import android.widget.Toast;
 
 public class DisplayHallInfoActivity extends Activity {
     
-    public static final String TAG = "HallApp";
+    public static final String TAG = "CaiusHall";
     
     private ListView lv;
     private MyListAdapter listAdapter;

@@ -1,4 +1,4 @@
-package com.joebateson.hallApp;
+package com.joebateson.CaiusHall;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

@@ -2,7 +2,7 @@
 <resources>
 
     <string name="hello">Hello World, HallAppActivity!</string>
-    <string name="app_name">HallApp</string>
+    <string name="app_name">CaiusHall</string>
     <string name="crsidText">Enter your CRSid here</string>
     <string name="loginButtonText">Login</string>
     <string name="preLoginInfo">Before accessing your hall account, you\'ll need to login. You should only need to do this once, until you want to explicitly log out.</string>

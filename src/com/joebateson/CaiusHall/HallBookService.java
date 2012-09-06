@@ -1,4 +1,4 @@
-package com.joebateson.hallApp;
+package com.joebateson.CaiusHall;
 
 import java.util.Arrays;
 import java.util.Calendar;

@@ -1,4 +1,4 @@
-package com.joebateson.hallApp;
+package com.joebateson.CaiusHall;
 
 import java.util.Calendar;
 import java.util.TimeZone;
