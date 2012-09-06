@@ -19,6 +19,7 @@ public class AutoHallActiveService extends Service {
     protected void setRecurringAlarm(Context context) {
 		
 	    Calendar updateTime = Calendar.getInstance();
+	    updateTime.add(Calendar.DAY_OF_MONTH, 1);
 	    updateTime.setTimeZone(TimeZone.getTimeZone("GMT"));
 	    updateTime.set(Calendar.HOUR_OF_DAY, 10);
 	    updateTime.set(Calendar.MINUTE, 00);
