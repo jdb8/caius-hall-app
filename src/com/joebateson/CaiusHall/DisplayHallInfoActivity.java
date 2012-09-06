@@ -123,27 +123,7 @@ public class DisplayHallInfoActivity extends Activity {
                 Intent startServiceIntent = new Intent(this, AutoHallActiveService.class);
                 startService(startServiceIntent);
             }
-            
-//            String crsid = globalSettings.getString("crsid", null);
-//            String password = globalSettings.getString("password", null);
-            
-//            if (crsid == null || password == null) {
-//                Context context = getApplicationContext();
-//                CharSequence text = "Please enter your CRSid and password";
-//                int duration = Toast.LENGTH_LONG;
-//
-//                Toast toast = Toast.makeText(context, text, duration);
-//                toast.show();
-//                
-//                Intent intent = new Intent(this, PrefsActivity.class);
-//                startActivity(intent);
-//            } else {
-//            	//new LoginAndPullTask().execute(crsid, password);
-//            }
-        }
-        
-        
-        
+        }        
     }
     
     @Override
