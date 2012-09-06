@@ -118,7 +118,6 @@ public class DisplayHallInfoActivity extends Activity {
             localUIUpdateDatesShown();
             localUIUpdateBookingStatus();
         } else {
-        	
             if (globalSettings.getBoolean("autoHall", false)) {
                 Intent startServiceIntent = new Intent(this, AutoHallActiveService.class);
                 startService(startServiceIntent);
@@ -134,12 +133,8 @@ public class DisplayHallInfoActivity extends Activity {
         String password = globalSettings.getString("password", null);
         
         if (crsid == null || password == null) {
-            Context context = getApplicationContext();
-            CharSequence text = "Please enter your CRSid and password";
-            int duration = Toast.LENGTH_LONG;
-
-            Toast toast = Toast.makeText(context, text, duration);
-            toast.show();
+            
+        	localUIToast("Please enter your CRSid and password");
             
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
@@ -192,7 +187,8 @@ public class DisplayHallInfoActivity extends Activity {
     public boolean onContextItemSelected(MenuItem item){ 
         switch (item.getItemId()) {
         case 1:	
-        		new BookHallTask(selectedDay, true, globalSettings.getBoolean("veggie", false)).execute();                
+        		new BookHallTask(selectedDay, true, globalSettings.getBoolean("veggie", false)).execute();
+        		
                 break;
         case 2: 
         		new BookHallTask(selectedDay, false, globalSettings.getBoolean("veggie", false)).execute();
@@ -257,7 +253,18 @@ public class DisplayHallInfoActivity extends Activity {
 		@Override
 		protected Boolean doInBackground(String... params) {
 			
-			return netBookHall(day, firstHall, vegetarian);
+			netBookHall(day, firstHall, vegetarian);
+			try {
+				return netPullOneBooking(day);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return false;
+			}
 		}
 
 		@Override
@@ -271,18 +278,13 @@ public class DisplayHallInfoActivity extends Activity {
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
 			if (!result){
-				localUIToast("Something went wrong in BookHallTask");
-			} else {
-				localPutHallBooking(globalSettings, day, firstHall, vegetarian);
-	    		localUIUpdateBookingStatus();
-			} 
+				localUIToast("Unable to book - something went wrong (server did not accept the booking)");
+			}
+			localUIUpdateBookingStatus();
 			globalDialog.dismiss();
 			DisplayHallInfoActivity.tasks.remove(this);
 		}
-        
-        
-
-        
+     
     }
     
     protected static boolean netBookHall(Date date, boolean firstHall, boolean vegetarian) {
@@ -375,8 +377,7 @@ public class DisplayHallInfoActivity extends Activity {
         @Override
         protected String doInBackground(String... args) {
         	String result = netLogin(args[0], args[1]);
-        	
-        	
+
             return result;
         }
         
@@ -404,6 +405,7 @@ public class DisplayHallInfoActivity extends Activity {
         
     }
     
+    // Remove when site SSL certificate is valid once again
     public HttpClient getNewHttpClient() {
         try {
             KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -504,11 +506,10 @@ public class DisplayHallInfoActivity extends Activity {
 		protected void onPostExecute(Boolean result) {
 			super.onPostExecute(result);
 			if (!result){
-				localUIToast("Something went wrong in onPostExecute");
-			} else {
-				localUIUpdateDatesShown();
-    			localUIUpdateBookingStatus();
+				localUIToast("Something went wrong when pulling multiple bookings from the server");
 			}
+			localUIUpdateDatesShown();
+			localUIUpdateBookingStatus();
 			DisplayHallInfoActivity.tasks.remove(this);
 			globalDialog.dismiss();
 		}
@@ -517,14 +518,45 @@ public class DisplayHallInfoActivity extends Activity {
         
     }
     
+    private boolean netPullOneBooking(Date date) throws IOException, ParseException{
+    	// Parse the date into a readable string, the same as the one on the server
+    	String dateString = formatPretty.format(date);
+		
+    	// Connect to the server, find the required link
+    	Document doc = Jsoup.connect(baseURL).get();
+    	String linkSelector = "table.list:eq(3) tr:contains(" + dateString + ") a:contains(View/Edit) ";
+    	Element link = doc.select(linkSelector).first();
+    	
+    	if (link == null){
+    		// Date is not currently booked on the server, cancel local booking and return false
+    		localCancelHallBooking(globalSettings, date);
+    		Log.w(TAG, "No hall booking found on server for " + dateString);
+    		return false;
+    	} else {
+    		// Open the associated page with details of the booking
+    		Document page = Jsoup.connect(baseURL + link.attr("href")).get();
+        	
+    		// Gather details of the booking
+    		String dateBooking = page.select("table.list td:contains(Date) ~ td").first().text();
+        	Date theDate = formatPretty.parse(dateBooking);
+        	String hallType = page.select("h1").first().text();
+        	Boolean firstHall = hallType.indexOf("First") != -1;
+        	Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
+        	
+        	// Add it to the local settings
+        	localPutHallBooking(globalSettings, theDate, firstHall, veggie);
+        	
+        	Log.i(TAG, "Booking on server for " + dateString + " was " + hallType + " + veggie=" + veggie);
+        	return true;
+    	}
+    }
+    
     private boolean netPullBookings(String url) throws IOException, ParseException{
     	
     	if (!loggedIn){
     		return false;
     	}
-    	
-    	
-    	
+
     	//When system is live use real base
     	//String base = "https://www.cai.cam.ac.uk/mealbookings/";
     	
