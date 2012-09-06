@@ -24,8 +24,8 @@
      android:title="Auto Hall"/>
 
   <ListPreference
-     android:entries="@array/hallOptions"
-     android:entryValues="@array/hallValues"
+     android:entries="@array/listOptions"
+     android:entryValues="@array/listValues"
      android:key="hallType"
      android:summary="Always first"
      android:title="Choose Hall" android:defaultValue="alwaysFirst" android:dependency="autoHall"/>
