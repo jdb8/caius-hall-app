@@ -18,32 +18,32 @@ import java.security.KeyStore;
 
 public class AdditionalCertHttpClient extends DefaultHttpClient {
 
-	final Context context;
+    final Context context;
 
-	public AdditionalCertHttpClient(Context context) {
-		this.context = context;
-	}
-	
-	@Override 
-	protected ClientConnectionManager createClientConnectionManager() {
-		SchemeRegistry registry = new SchemeRegistry();
-		registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
-		registry.register(new Scheme("https", newSslSocketFactory(), 443));
-		return new SingleClientConnManager(getParams(), registry);
-	}
-	
-	private SSLSocketFactory newSslSocketFactory() {
-		try {
-			KeyStore trusted = KeyStore.getInstance("BKS");
-			InputStream in = context.getResources().openRawResource(R.raw.mystoreraven);
-			try {
-				trusted.load(in, "badpass".toCharArray());
-			} finally {
-				in.close();
-			}
-			return new SSLSocketFactory(trusted);
-		} catch (Exception e) {
-			throw new AssertionError(e);
-		}
-	  }
+    public AdditionalCertHttpClient(Context context) {
+        this.context = context;
+    }
+
+    @Override
+    protected ClientConnectionManager createClientConnectionManager() {
+        SchemeRegistry registry = new SchemeRegistry();
+        registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
+        registry.register(new Scheme("https", newSslSocketFactory(), 443));
+        return new SingleClientConnManager(getParams(), registry);
+    }
+
+    private SSLSocketFactory newSslSocketFactory() {
+        try {
+            KeyStore trusted = KeyStore.getInstance("BKS");
+            InputStream in = context.getResources().openRawResource(R.raw.mystoreraven);
+            try {
+                trusted.load(in, "badpass".toCharArray());
+            } finally {
+                in.close();
+            }
+            return new SSLSocketFactory(trusted);
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+      }
 }
