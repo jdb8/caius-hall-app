@@ -87,7 +87,7 @@ public class DisplayHallInfoActivity extends Activity {
             InputStream rawResource = resources.openRawResource(R.raw.version);
             Properties properties = new Properties();
             properties.load(rawResource);
-            return properties.getProperty("changeset");
+            return properties.getProperty("changeset").trim();
         } catch (IOException e) {
             Log.e(TAG, "Cannot load app version properties file", e);
         }

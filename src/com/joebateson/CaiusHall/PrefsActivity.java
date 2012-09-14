@@ -142,7 +142,7 @@ public class PrefsActivity extends PreferenceActivity implements OnSharedPrefere
 				HttpResponse response = client.execute(get);
 				HttpEntity entity = response.getEntity();
 		        String latestVersion = EntityUtils.toString(entity, HTTP.UTF_8);
-		        if (currentRevision.equals(latestVersion)) {
+		        if (currentRevision.equals(latestVersion.trim())) {
 		        	// We have latest version, return null
 		        	return null;
 		        } else {
