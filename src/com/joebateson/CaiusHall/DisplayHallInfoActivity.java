@@ -227,7 +227,7 @@ public class DisplayHallInfoActivity extends Activity {
         Date date = day.getTime();
         for (int i = 0; i<7; i++) {
             values.add(formatPretty.format(date));
-            day.roll(Calendar.DAY_OF_MONTH, 1);
+            day.add(Calendar.DAY_OF_MONTH, 1);
             date = day.getTime();
         }
         listAdapter = new MyListAdapter(DisplayHallInfoActivity.this, values, details);
@@ -240,7 +240,7 @@ public class DisplayHallInfoActivity extends Activity {
         Date date = day.getTime();
         for (int i = 0; i<7; i++) {
             details.add(localGetHallBooking(globalSettings, date));
-            day.roll(Calendar.DAY_OF_MONTH, 1);
+            day.add(Calendar.DAY_OF_MONTH, 1);
             date = day.getTime();
         }
         listAdapter = new MyListAdapter(DisplayHallInfoActivity.this, values, details);
