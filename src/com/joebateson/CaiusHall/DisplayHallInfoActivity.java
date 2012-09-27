@@ -310,9 +310,17 @@ public class DisplayHallInfoActivity extends Activity {
 
         String format = String.format("%%0%dd", 2);
         String sDay = String.format(format, day);
-        int hallCode = 140;
+        int hallCode;
         String veggie = "0";
-        if (!firstHall) hallCode = 141;
+        if (!firstHall) {
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY){
+                hallCode = 169;
+            } else {
+                hallCode = 168;
+            }
+        } else {
+            hallCode = 167;
+        }
         if (vegetarian) veggie = "1";
         String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
 
