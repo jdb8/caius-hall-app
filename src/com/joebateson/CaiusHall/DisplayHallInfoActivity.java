@@ -62,7 +62,7 @@ public class DisplayHallInfoActivity extends Activity {
     private ArrayList<String> details;
 
     private Date selectedDay = null;
-    private String baseURL = "http://192.168.0.9:8888/";
+    private String baseURL = "https://www.cai.cam.ac.uk/mealbookings/";
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
 
     private static final SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
@@ -543,10 +543,6 @@ public class DisplayHallInfoActivity extends Activity {
             return false;
         }
 
-        //When system is live use real base
-        //String base = "https://www.cai.cam.ac.uk/mealbookings/";
-
-        //Document doc = Jsoup.parse(html);
         Document doc = Jsoup.connect(url).get();
 
         if (doc == null) {
