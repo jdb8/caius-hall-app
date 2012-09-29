@@ -2,6 +2,7 @@ package com.joebateson.CaiusHall;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -63,6 +64,10 @@ public class DisplayHallInfoActivity extends Activity {
 
     private Date selectedDay = null;
     private String baseURL = "https://www.cai.cam.ac.uk/mealbookings/";
+
+    // For debugging purposes
+    //private String baseURL = "http://192.168.0.9:8888";
+
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
 
     private static final SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
@@ -76,6 +81,8 @@ public class DisplayHallInfoActivity extends Activity {
     private static boolean loggedIn = false;
 
     private ProgressDialog globalDialog;
+
+
 
     private static ArrayList<AsyncTask> tasks = new ArrayList<AsyncTask>();
 
@@ -432,10 +439,13 @@ public class DisplayHallInfoActivity extends Activity {
             httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
 
             // This URL may change, works currently however
-            String location = "https://raven.cam.ac.uk/auth/authenticate.html?ver=1&url=https%3a%2f%2fwww.cai.cam.ac.uk%2fmealbookings%2f";
+            //String location = "https://raven.cam.ac.uk/auth/authenticate.html?ver=1&url=https%3a%2f%2fwww.cai.cam.ac.uk%2fmealbookings%2f";
+            String location = "https://raven.cam.ac.uk/auth/authenticate2.html";
 
             HttpPost post = new HttpPost(location);
-            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(3);
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(5);
+            nameValuePairs.add(new BasicNameValuePair("ver", "1"));
+            nameValuePairs.add(new BasicNameValuePair("url", baseURL));
             nameValuePairs.add(new BasicNameValuePair("userid", crsid));
             nameValuePairs.add(new BasicNameValuePair("pwd", password));
             nameValuePairs.add(new BasicNameValuePair("submit", "Submit"));
@@ -444,8 +454,13 @@ public class DisplayHallInfoActivity extends Activity {
             HttpResponse response = httpClient.execute(post, httpContext);
             HttpEntity entity2 = response.getEntity();
             mealBookingIndexHtml = EntityUtils.toString(entity2, HTTP.UTF_8);
+
+            // In fact, this page is not meal booking
+            // TODO: sort out page gets and posts
             Document doc = Jsoup.parse(mealBookingIndexHtml);
             Element error = doc.select("span.error").first();
+
+            // TODO: make login error checking more robust
             if (error != null) {
                 return "Something went wrong when logging in: " + error.text();
             } else {
@@ -509,8 +524,9 @@ public class DisplayHallInfoActivity extends Activity {
         String dateString = formatPretty.format(date);
 
         // Connect to the server, find the required link
-        Document doc = Jsoup.connect(baseURL).get();
-        String linkSelector = "table.list:eq(3) tr:contains(" + dateString + ") a:contains(View/Edit) ";
+        String docHtml = netGetData(baseURL);
+        Document doc = Jsoup.parse(docHtml);
+        String linkSelector = "table.list tr:contains(" + dateString + ") a:contains(View/Edit) ";
         Element link = doc.select(linkSelector).first();
 
         if (link == null){
@@ -520,7 +536,8 @@ public class DisplayHallInfoActivity extends Activity {
             return false;
         } else {
             // Open the associated page with details of the booking
-            Document page = Jsoup.connect(baseURL + link.attr("href")).get();
+            String pageHtml = netGetData(baseURL + link.attr("href"));
+            Document page = Jsoup.parse(pageHtml);
 
             // Gather details of the booking
             String dateBooking = page.select("table.list td:contains(Date) ~ td").first().text();
@@ -543,18 +560,23 @@ public class DisplayHallInfoActivity extends Activity {
             return false;
         }
 
-        Document doc = Jsoup.connect(url).get();
+        String bookingsHtml = netGetData(url);
+
+        Document doc = Jsoup.parse(bookingsHtml);
 
         if (doc == null) {
             return false;
         } else {
-            String linkSelector = "table.list:eq(3) a:contains(View/Edit) ";
+            String linkSelector = "table.list a:contains(View/Edit)";
             Elements links = doc.select(linkSelector);
 
             ArrayList<String> bookingDates = new ArrayList<String>();
 
+            String linkHtml;
+            Document page;
             for (Element link : links){
-                Document page = Jsoup.connect(url + link.attr("href")).get();
+                linkHtml = netGetData(url + link.attr("href"));
+                page = Jsoup.parse(linkHtml);
                 if (page == null) {
                     return false;
                 } else {

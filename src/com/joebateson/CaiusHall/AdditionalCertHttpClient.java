@@ -32,18 +32,21 @@ public class AdditionalCertHttpClient extends DefaultHttpClient {
         return new SingleClientConnManager(getParams(), registry);
     }
 
-    private SSLSocketFactory newSslSocketFactory() {
+    protected SSLSocketFactory newSslSocketFactory() {
         try {
-            KeyStore trusted = KeyStore.getInstance("BKS");
-            InputStream in = context.getResources().openRawResource(R.raw.mystoreraven);
+            final KeyStore ks = KeyStore.getInstance("BKS");
+
+            final InputStream in = context.getResources().openRawResource(R.raw.mystoreboth);
             try {
-                trusted.load(in, "badpass".toCharArray());
+                ks.load(in, ( "badpass" ).toCharArray());
             } finally {
                 in.close();
             }
-            return new SSLSocketFactory(trusted);
-        } catch (Exception e) {
-            throw new AssertionError(e);
+
+            return new AdditionalKeyStoresSSLSocketFactory(ks);
+
+        } catch( Exception e ) {
+            throw new RuntimeException(e);
         }
-      }
+    }
 }
