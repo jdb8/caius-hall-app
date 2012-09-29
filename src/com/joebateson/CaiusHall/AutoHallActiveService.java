@@ -22,7 +22,7 @@ public class AutoHallActiveService extends Service {
         updateTime.add(Calendar.DAY_OF_MONTH, 1);
         updateTime.setTimeZone(TimeZone.getTimeZone("GMT"));
         updateTime.set(Calendar.HOUR_OF_DAY, 10);
-        updateTime.set(Calendar.MINUTE, 00);
+        updateTime.set(Calendar.MINUTE, 02);
 
         Intent booker = new Intent(context, HallAutoBookReceiver.class);
         booker.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
