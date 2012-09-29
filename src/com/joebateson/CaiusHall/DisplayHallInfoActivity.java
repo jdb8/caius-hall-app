@@ -73,7 +73,7 @@ public class DisplayHallInfoActivity extends Activity {
     private static final SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
     protected static final SimpleDateFormat formatPretty = new SimpleDateFormat("EEEE d MMMM yyyy");
 
-    private SharedPreferences globalSettings;
+    private static SharedPreferences globalSettings;
     private SharedPreferences.Editor globalSettingsEditor;
     private static HttpClient httpClient;
     private static HttpContext httpContext;
@@ -210,10 +210,7 @@ public class DisplayHallInfoActivity extends Activity {
                 new BookHallTask(selectedDay, false, globalSettings.getBoolean("veggie", false)).execute();
                 break;
         case 3:
-                // TODO: cancel online as well as locally
-                //localCancelHallBooking(globalSettings, selectedDay);
-                localUIToast("Cancelling bookings is not implemented yet - sorry!");
-                localUIUpdateBookingStatus();
+                new CancelHallTask(selectedDay).execute();
                 break;
         }
         return false;
@@ -303,9 +300,59 @@ public class DisplayHallInfoActivity extends Activity {
 
     }
 
+    private class CancelHallTask extends AsyncTask<String, Void, Boolean> {
+
+        private Date day;
+
+        protected CancelHallTask(Date day){
+            this.day = day;
+        }
+
+        @Override
+        protected Boolean doInBackground(String... params) {
+
+            netCancelHall(day);
+            try {
+                return !netPullOneBooking(day);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                return false;
+            } catch (ParseException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+        @Override
+        protected void onPreExecute() {
+            DisplayHallInfoActivity.tasks.add(this);
+            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "",
+                    "Booking...", true);
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            super.onPostExecute(result);
+            if (!result){
+                localUIToast("Unable to cancel booking - something went wrong");
+            }
+            localUIUpdateBookingStatus();
+            globalDialog.dismiss();
+            DisplayHallInfoActivity.tasks.remove(this);
+        }
+
+    }
+
     protected static boolean netBookHall(Date date, boolean firstHall, boolean vegetarian) {
 
         if (!loggedIn){
+            return false;
+        }
+
+        if (!(localGetHallBooking(globalSettings, date).equals("No Hall"))){
+            // Already made a booking, return false
             return false;
         }
 
@@ -341,6 +388,57 @@ public class DisplayHallInfoActivity extends Activity {
         try {
             netPostData(url, nameValuePairs);
             Log.i("DisplayHallInfoActivity", "Booked hall on " + date.toString());
+            return true;
+        } catch (ClientProtocolException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return false;
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean netCancelHall(Date date) {
+        if (!loggedIn){
+            return false;
+        }
+
+        String hallTypeCurrentlyBooked = localGetHallBooking(globalSettings, date);
+        if (hallTypeCurrentlyBooked.equals("No Hall")){
+            // No booking to cancel
+            return true;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        int year = calendar.get(Calendar.YEAR);
+        String month = new String[] { "01", "02", "03", "04","05", "06", "07", "08", "09", "10", "11", "12" } [ calendar.get(Calendar.MONTH) ];
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+
+        String format = String.format("%%0%dd", 2);
+        String sDay = String.format(format, day);
+
+
+        int hallCode;
+        if (hallTypeCurrentlyBooked.equals("Formal Hall")) {
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY){
+                hallCode = 169;
+            } else {
+                hallCode = 168;
+            }
+        } else {
+            hallCode = 167;
+        }
+
+        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
+
+        List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(1);
+        nameValuePairs.add(new BasicNameValuePair("delete_confirm", "Yes"));
+
+        try {
+            netPostData(url, nameValuePairs);
             return true;
         } catch (ClientProtocolException e) {
             // TODO Auto-generated catch block

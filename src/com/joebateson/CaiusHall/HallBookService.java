@@ -61,9 +61,8 @@ public class HallBookService extends IntentService {
                     DisplayHallInfoActivity.netBookHall(theDay, false, veggie);
                     DisplayHallInfoActivity.localPutHallBooking(settings, theDay, false, veggie);
                 } else if (dayTypes.get(day).equals("noHall")){
-                    //DisplayHallInfoActivity.netCancelHall(theDay);
-                    //DisplayHallInfoActivity.localCancelHallBooking(settings, theDay);
-                    Log.w("HallBookService", "(unimplemented) CANCEL BOOKING ON " + theDay.toString());
+                    DisplayHallInfoActivity.netCancelHall(theDay);
+                    DisplayHallInfoActivity.localCancelHallBooking(settings, theDay);
                 }
             }
             return false;
