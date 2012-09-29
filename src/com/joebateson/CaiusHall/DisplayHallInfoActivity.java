@@ -373,7 +373,11 @@ public class DisplayHallInfoActivity extends Activity {
                 hallCode = 168;
             }
         } else {
-            hallCode = 167;
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY){
+                hallCode = 172;
+            } else {
+                hallCode = 167;
+            }
         }
         if (vegetarian) veggie = "1";
         String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
@@ -429,7 +433,11 @@ public class DisplayHallInfoActivity extends Activity {
                 hallCode = 168;
             }
         } else {
-            hallCode = 167;
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY){
+                hallCode = 172;
+            } else {
+                hallCode = 167;
+            }
         }
 
         String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
