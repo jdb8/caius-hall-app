@@ -219,7 +219,6 @@ public class DisplayHallInfoActivity extends Activity {
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
         } else {
-            new PullBookingsTask().execute();
             localUIUpdateDatesShown();
             localUIUpdateBookingStatus();
         }
