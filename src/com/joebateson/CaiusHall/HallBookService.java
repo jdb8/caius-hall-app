@@ -25,12 +25,21 @@ public class HallBookService extends IntentService {
     private class BookAllDesiredHallsTask extends AsyncTask<String, Void, Boolean> {
         @Override
         protected Boolean doInBackground(String... strings) {
+
+            if (!DisplayHallInfoActivity.netIsLoggedIn()){
+                DisplayHallInfoActivity.netLogin();
+            }
+
+            if (!DisplayHallInfoActivity.netIsLoggedIn()){
+                Log.e("Login error", "Should be logged in, something wrong (HallBookService)");
+                return false;
+            }
+
             SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
             boolean veggie = settings.getBoolean("veggie", false);
 
             int[] days = {Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY, Calendar.SATURDAY, Calendar.SUNDAY};
 
-            //String[] dayTypes = new String[7];
             Map<Integer, String> dayTypes = new HashMap<Integer, String>(7);
 
             String daySetting = settings.getString("hallType", "undefined");
@@ -52,8 +61,9 @@ public class HallBookService extends IntentService {
                 }
             }
 
+            Date theDay;
             for (int day : days) {
-                Date theDay = DisplayHallInfoActivity.futureDay(day);
+                theDay = DisplayHallInfoActivity.futureDay(day);
                 if (dayTypes.get(day).equals("first")){
                     DisplayHallInfoActivity.netBookHall(theDay, true, veggie);
                     DisplayHallInfoActivity.localPutHallBooking(settings, theDay, true, veggie);
@@ -72,36 +82,5 @@ public class HallBookService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         new BookAllDesiredHallsTask().execute();
-    }
-
-    private class BookHallTask extends AsyncTask<String, Void, Boolean> {
-
-        private Date day;
-        private boolean firstHall;
-        private boolean vegetarian;
-
-        protected BookHallTask(Date day, boolean firstHall, boolean veggie){
-            this.day = day;
-            this.firstHall = firstHall;
-            this.vegetarian = veggie;
-        }
-
-        @Override
-        protected Boolean doInBackground(String... params) {
-
-            return DisplayHallInfoActivity.netBookHall(day, firstHall, vegetarian);
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            super.onPostExecute(result);
-            if (!result){
-                // problem
-            } else {
-                SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                DisplayHallInfoActivity.localPutHallBooking(settings, day, firstHall, vegetarian);
-            }
-        }
-
     }
 }

@@ -68,7 +68,7 @@ public class DisplayHallInfoActivity extends Activity {
     private ArrayList<String> details;
 
     private Date selectedDay = null;
-    private String baseURL = "https://www.cai.cam.ac.uk/mealbookings/";
+    private static final String baseURL = "https://www.cai.cam.ac.uk/mealbookings/";
 
     // For debugging purposes
     // private String baseURL = "http://192.168.0.9:8888";
@@ -132,7 +132,7 @@ public class DisplayHallInfoActivity extends Activity {
      *
      * @return true if user is logged in, false otherwise
      */
-    protected boolean netIsLoggedIn() {
+    protected static boolean netIsLoggedIn() {
 
         boolean answer = false;
 
@@ -343,7 +343,7 @@ public class DisplayHallInfoActivity extends Activity {
      * @see netBookHall
      *
      */
-    private class BookHallTask extends AsyncTask<String, Void, Boolean> {
+    protected class BookHallTask extends AsyncTask<String, Void, Boolean> {
 
         private Date day;
         private boolean firstHall;
@@ -688,26 +688,13 @@ public class DisplayHallInfoActivity extends Activity {
      * @return String - The success or failure of the login.
      */
     //TODO: Change function to remove String return for better error checking.
-    private String netLogin() {
-        Log.d(TAG, "netLogin()");
+    protected static String netLogin() {
 
         String crsid = globalSettings.getString("crsid", "");
         String password = globalSettings.getString("password", "");
 
         try {
-            String location = "https://raven.cam.ac.uk/auth/authenticate2.html";
-//            HttpGet get = new HttpGet(baseURL);
-//            HttpResponse resp = httpClient.execute(get, httpContext);
-//            int code = resp.getStatusLine().getStatusCode();
-//            if (code == 302){
-//                location = resp.getFirstHeader("Location").getValue();
-//            } else if (code == 200) {
-//                Log.w(TAG, "Expected 302 header but found 200, already logged in?");
-//                return "Already logged in";
-//            } else {
-//                Log.e(TAG, "Unknown status code recieved on retrieval");
-//                return "Received an unknown status code";
-//            }
+            final String location = "https://raven.cam.ac.uk/auth/authenticate2.html";
 
             HttpPost post = new HttpPost(location);
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(5);
