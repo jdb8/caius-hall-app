@@ -12,9 +12,12 @@ import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.HttpClient;
@@ -24,6 +27,8 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.ClientContext;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
@@ -66,27 +71,34 @@ public class DisplayHallInfoActivity extends Activity {
     private String baseURL = "https://www.cai.cam.ac.uk/mealbookings/";
 
     // For debugging purposes
-    //private String baseURL = "http://192.168.0.9:8888";
+    // private String baseURL = "http://192.168.0.9:8888";
 
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
 
-    private static final SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
-    protected static final SimpleDateFormat formatPretty = new SimpleDateFormat("EEEE d MMMM yyyy");
+    private static final SimpleDateFormat format = new SimpleDateFormat(
+            "yyyyMMdd");
+    protected static final SimpleDateFormat formatPretty = new SimpleDateFormat(
+            "EEEE d MMMM yyyy");
 
     private static SharedPreferences globalSettings;
     private SharedPreferences.Editor globalSettingsEditor;
     private static HttpClient httpClient;
     private static HttpContext httpContext;
     private static CookieStore cookieStore;
-    private static boolean loggedIn = false;
 
     private ProgressDialog globalDialog;
 
-
-
     private static ArrayList<AsyncTask> tasks = new ArrayList<AsyncTask>();
 
-    // Useful method from: http://www.tristanwaddington.com/2011/07/update-hg-or-git-changest-during-android-build/
+    /**
+     * Retrieves the 'version' number from the version.properties file.
+     *
+     * This function will fetch the git commit hash which is set during the build process in
+     * res/raw/version.properties.
+     *
+     * @return String The string which refers to the current git commit.
+     * @see <a href="http://www.tristanwaddington.com/2011/07/update-hg-or-git-changest-during-android-build/">http://www.tristanwaddington.com/2011/07/update-hg-or-git-changest-during-android-build/</a>
+     */
     public String getAppChangsetFromPropertiesFile() {
         Resources resources = getResources();
 
@@ -111,6 +123,55 @@ public class DisplayHallInfoActivity extends Activity {
         return data;
     }
 
+    /**
+     * Function to check if the user is logged in.
+     *
+     * The function uses an HTTP get request to request a page only accessible
+     * if logged in ({@link baseURL}), and then checks the location header. If not redirected to
+     * Raven, the location header should be equal to the baseURL.
+     *
+     * @return true if user is logged in, false otherwise
+     */
+    protected boolean netIsLoggedIn() {
+
+        boolean answer = false;
+
+        try {
+            HttpGet get = new HttpGet(baseURL);
+            HttpParams params = new BasicHttpParams();
+            params.setParameter("http.protocol.handle-redirects",false);
+            get.setParams(params);
+
+            HttpResponse resp = httpClient.execute(get, httpContext);
+
+            int statusCode = resp.getStatusLine().getStatusCode();
+            answer = (statusCode == 200);
+
+            resp.getEntity().consumeContent();
+        } catch (ClientProtocolException e) {
+            Log.e(TAG, "ClientProtocolException in netIsLoggedIn()");
+            return false;
+        } catch (IOException e) {
+            return false;
+        }
+
+        return answer;
+    }
+
+    /**
+     * A function to set up the required HttpClient and HttpContext.
+     *
+     * Assigns new values of the HttpClient and HttpContext to the fields in the activity.
+     */
+    private void setUpHttp(){
+        if (httpClient == null){
+            httpClient = new AdditionalCertHttpClient(getApplicationContext());
+            httpContext = new BasicHttpContext();
+            cookieStore = new BasicCookieStore();
+            httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+        }
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -123,7 +184,8 @@ public class DisplayHallInfoActivity extends Activity {
         globalSettings = PreferenceManager.getDefaultSharedPreferences(this);
         globalSettingsEditor = globalSettings.edit();
 
-        globalSettingsEditor.putString("app_revision", this.getAppChangsetFromPropertiesFile());
+        globalSettingsEditor.putString("app_revision",
+                this.getAppChangsetFromPropertiesFile());
         globalSettingsEditor.commit();
 
         final Object[] data = (Object[]) getLastNonConfigurationInstance();
@@ -134,8 +196,10 @@ public class DisplayHallInfoActivity extends Activity {
             localUIUpdateDatesShown();
             localUIUpdateBookingStatus();
         } else {
+            setUpHttp();
             if (globalSettings.getBoolean("autoHall", false)) {
-                Intent startServiceIntent = new Intent(this, AutoHallActiveService.class);
+                Intent startServiceIntent = new Intent(this,
+                        AutoHallActiveService.class);
                 startService(startServiceIntent);
             }
         }
@@ -154,17 +218,17 @@ public class DisplayHallInfoActivity extends Activity {
 
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
-        } else if (!loggedIn) {
-            new LoginAndPullTask().execute(crsid, password);
         } else {
+            new PullBookingsTask().execute();
             localUIUpdateDatesShown();
             localUIUpdateBookingStatus();
         }
 
-
     }
 
-    /* (non-Javadoc)
+    /*
+     * (non-Javadoc)
+     *
      * @see android.app.Activity#onPause()
      */
     @Override
@@ -172,7 +236,7 @@ public class DisplayHallInfoActivity extends Activity {
         // TODO Auto-generated method stub
         super.onPause();
 
-        for (AsyncTask task : tasks){
+        for (AsyncTask task : tasks) {
             task.cancel(true);
         }
 
@@ -182,11 +246,9 @@ public class DisplayHallInfoActivity extends Activity {
 
     }
 
-
-
-
     @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+    public void onCreateContextMenu(ContextMenu menu, View v,
+            ContextMenu.ContextMenuInfo menuInfo) {
 
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
         Adapter adapter = listAdapter;
@@ -200,22 +262,26 @@ public class DisplayHallInfoActivity extends Activity {
     }
 
     @Override
-    public boolean onContextItemSelected(MenuItem item){
+    public boolean onContextItemSelected(MenuItem item) {
         switch (item.getItemId()) {
         case 1:
-                new BookHallTask(selectedDay, true, globalSettings.getBoolean("veggie", false)).execute();
-
-                break;
+            new BookHallTask(selectedDay, true, globalSettings.getBoolean("veggie", false)).execute();
+            break;
         case 2:
-                new BookHallTask(selectedDay, false, globalSettings.getBoolean("veggie", false)).execute();
-                break;
+            new BookHallTask(selectedDay, false, globalSettings.getBoolean("veggie", false)).execute();
+            break;
         case 3:
-                new CancelHallTask(selectedDay).execute();
-                break;
+            new CancelHallTask(selectedDay).execute();
+            break;
         }
         return false;
     }
 
+    /**
+     * Toasts a message for the length {@link Toast.LENGTH_LONG} to the screen.
+     *
+     * @param message - The message to be toasted.
+     */
     protected void localUIToast(String message) {
         Context context = getApplicationContext();
         CharSequence text = message;
@@ -225,39 +291,73 @@ public class DisplayHallInfoActivity extends Activity {
         toast.show();
     }
 
+    /**
+     * Updates the dates shown in the main list of the application.
+     *
+     * Will show the next 7 days based on the current date.
+     */
     private void localUIUpdateDatesShown() {
         values = new ArrayList<String>();
         Calendar day = Calendar.getInstance();
         Date date = day.getTime();
-        for (int i = 0; i<7; i++) {
+        for (int i = 0; i < 7; i++) {
             values.add(formatPretty.format(date));
             day.add(Calendar.DAY_OF_MONTH, 1);
             date = day.getTime();
         }
-        listAdapter = new MyListAdapter(DisplayHallInfoActivity.this, values, details);
+        listAdapter = new MyListAdapter(DisplayHallInfoActivity.this, values,
+                details);
         lv.setAdapter(listAdapter);
     }
 
+    /**
+     * Updates the status (First, Formal, No Hall etc.) of the dates shown in the application.
+     *
+     * The status of the bookings is determined by the local values in SharedPreferences.
+     */
     private void localUIUpdateBookingStatus() {
         details = new ArrayList<String>();
         Calendar day = Calendar.getInstance();
         Date date = day.getTime();
-        for (int i = 0; i<7; i++) {
-            details.add(localGetHallBooking(globalSettings, date));
+        String hallType;
+        for (int i = 0; i < 7; i++) {
+            hallType = localGetHallBooking(globalSettings, date);
+            if (day.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY && hallType.equals("First Hall")){
+                details.add("Cafeteria Hall");
+            } else {
+                details.add(hallType);
+            }
             day.add(Calendar.DAY_OF_MONTH, 1);
             date = day.getTime();
         }
-        listAdapter = new MyListAdapter(DisplayHallInfoActivity.this, values, details);
+        listAdapter = new MyListAdapter(DisplayHallInfoActivity.this, values,
+                details);
         lv.setAdapter(listAdapter);
     }
 
+    /**
+     * A task (extending {@link android.os.AsyncTask}) to book hall. <b>Uses {@link netBookHall} to book</b>.
+     *
+     * An AsyncTask implementation is required as network activity is to be performed, and
+     * must therefore be done on a thread other than the main UI thread.
+     *
+     * @see netBookHall
+     *
+     */
     private class BookHallTask extends AsyncTask<String, Void, Boolean> {
 
         private Date day;
         private boolean firstHall;
         private boolean vegetarian;
 
-        protected BookHallTask(Date day, boolean firstHall, boolean veggie){
+        /**
+         * Constructor for the task - pass in required values when instantiating a new task to be executed.
+         *
+         * @param day - the date to be booked
+         * @param firstHall - true if first hall, false if formal (<b>Note: cafeteria hall is treated as first hall</b>)
+         * @param veggie - true if vegetarian option is required
+         */
+        protected BookHallTask(Date day, boolean firstHall, boolean veggie) {
             this.day = day;
             this.firstHall = firstHall;
             this.vegetarian = veggie;
@@ -266,7 +366,17 @@ public class DisplayHallInfoActivity extends Activity {
         @Override
         protected Boolean doInBackground(String... params) {
 
+            if (!netIsLoggedIn()){
+                netLogin();
+            }
+
+            if (!netIsLoggedIn()){
+                Log.e("Login error", "Should be logged in, something wrong (BookHallTask)");
+                return false;
+            }
+
             netBookHall(day, firstHall, vegetarian);
+
             try {
                 return netPullOneBooking(day);
             } catch (IOException e) {
@@ -283,14 +393,14 @@ public class DisplayHallInfoActivity extends Activity {
         @Override
         protected void onPreExecute() {
             DisplayHallInfoActivity.tasks.add(this);
-            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "",
-                    "Booking...", true);
+            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this,
+                    "", "Booking...", true);
         }
 
         @Override
         protected void onPostExecute(Boolean result) {
             super.onPostExecute(result);
-            if (!result){
+            if (!result) {
                 localUIToast("Unable to book - something went wrong (server did not accept the booking)");
             }
             localUIUpdateBookingStatus();
@@ -300,16 +410,39 @@ public class DisplayHallInfoActivity extends Activity {
 
     }
 
+    /**
+     * A task (extending {@link android.os.AsyncTask}) to cancel an existing hall booking. <b>Uses {@link netCancelHall} to cancel</b>.
+     *
+     * An AsyncTask implementation is required as network activity is to be performed, and
+     * must therefore be done on a thread other than the main UI thread.
+     *
+     * @see netCancelHall
+     *
+     */
     private class CancelHallTask extends AsyncTask<String, Void, Boolean> {
 
         private Date day;
 
-        protected CancelHallTask(Date day){
+        /**
+         * Constructor for the task - pass in required values when instantiating a new task to be executed.
+         *
+         * @param day - the day to be cancelled.
+         */
+        protected CancelHallTask(Date day) {
             this.day = day;
         }
 
         @Override
         protected Boolean doInBackground(String... params) {
+
+            if (!netIsLoggedIn()){
+                netLogin();
+            }
+
+            if (!netIsLoggedIn()){
+                Log.e("Login error", "Should be logged in, something wrong (CancelHallTask)");
+                return false;
+            }
 
             netCancelHall(day);
             try {
@@ -328,14 +461,14 @@ public class DisplayHallInfoActivity extends Activity {
         @Override
         protected void onPreExecute() {
             DisplayHallInfoActivity.tasks.add(this);
-            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "",
-                    "Booking...", true);
+            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this,
+                    "", "Cancelling...", true);
         }
 
         @Override
         protected void onPostExecute(Boolean result) {
             super.onPostExecute(result);
-            if (!result){
+            if (!result) {
                 localUIToast("Unable to cancel booking - something went wrong");
             }
             localUIUpdateBookingStatus();
@@ -345,13 +478,18 @@ public class DisplayHallInfoActivity extends Activity {
 
     }
 
-    protected static boolean netBookHall(Date date, boolean firstHall, boolean vegetarian) {
+    /**
+     * Books hall for a specific day.
+     *
+     * @param date - the day to be booked
+     * @param firstHall - true if first hall, false if formal (<b>Note: cafeteria hall is treated as first hall</b>)
+     * @param vegetarian - true if vegetarian option is required
+     * @return boolean - true if booking was successful, false otherwise.
+     */
+    protected static boolean netBookHall(Date date, boolean firstHall,
+            boolean vegetarian) {
 
-        if (!loggedIn){
-            return false;
-        }
-
-        if (!(localGetHallBooking(globalSettings, date).equals("No Hall"))){
+        if (!(localGetHallBooking(globalSettings, date).equals("No Hall"))) {
             // Already made a booking, return false
             return false;
         }
@@ -359,7 +497,8 @@ public class DisplayHallInfoActivity extends Activity {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
         int year = calendar.get(Calendar.YEAR);
-        String month = new String[] { "01", "02", "03", "04","05", "06", "07", "08", "09", "10", "11", "12" } [ calendar.get(Calendar.MONTH) ];
+        String month = new String[] { "01", "02", "03", "04", "05", "06", "07",
+                "08", "09", "10", "11", "12" }[calendar.get(Calendar.MONTH)];
         int day = calendar.get(Calendar.DAY_OF_MONTH);
 
         String format = String.format("%%0%dd", 2);
@@ -367,20 +506,22 @@ public class DisplayHallInfoActivity extends Activity {
         int hallCode;
         String veggie = "0";
         if (!firstHall) {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY){
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                 hallCode = 169;
             } else {
                 hallCode = 168;
             }
         } else {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY){
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
                 hallCode = 172;
             } else {
                 hallCode = 167;
             }
         }
-        if (vegetarian) veggie = "1";
-        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
+        if (vegetarian)
+            veggie = "1";
+        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event="
+                + hallCode + "&date=" + year + "-" + month + "-" + sDay;
 
         List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(5);
         nameValuePairs.add(new BasicNameValuePair("guests", "0"));
@@ -391,10 +532,11 @@ public class DisplayHallInfoActivity extends Activity {
 
         try {
             netPostData(url, nameValuePairs);
-            Log.i("DisplayHallInfoActivity", "Booked hall on " + date.toString());
+            Log.i("DisplayHallInfoActivity",
+                    "Booked hall on " + date.toString());
             return true;
         } catch (ClientProtocolException e) {
-            // TODO Auto-generated catch block
+            Log.e(TAG, "ClientProtocolException in netBookHall()");
             e.printStackTrace();
             return false;
         } catch (IOException e) {
@@ -405,12 +547,10 @@ public class DisplayHallInfoActivity extends Activity {
     }
 
     public static boolean netCancelHall(Date date) {
-        if (!loggedIn){
-            return false;
-        }
 
-        String hallTypeCurrentlyBooked = localGetHallBooking(globalSettings, date);
-        if (hallTypeCurrentlyBooked.equals("No Hall")){
+        String hallTypeCurrentlyBooked = localGetHallBooking(globalSettings,
+                date);
+        if (hallTypeCurrentlyBooked.equals("No Hall")) {
             // No booking to cancel
             return true;
         }
@@ -418,29 +558,30 @@ public class DisplayHallInfoActivity extends Activity {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
         int year = calendar.get(Calendar.YEAR);
-        String month = new String[] { "01", "02", "03", "04","05", "06", "07", "08", "09", "10", "11", "12" } [ calendar.get(Calendar.MONTH) ];
+        String month = new String[] { "01", "02", "03", "04", "05", "06", "07",
+                "08", "09", "10", "11", "12" }[calendar.get(Calendar.MONTH)];
         int day = calendar.get(Calendar.DAY_OF_MONTH);
 
         String format = String.format("%%0%dd", 2);
         String sDay = String.format(format, day);
 
-
         int hallCode;
         if (hallTypeCurrentlyBooked.equals("Formal Hall")) {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY){
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                 hallCode = 169;
             } else {
                 hallCode = 168;
             }
         } else {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY){
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
                 hallCode = 172;
             } else {
                 hallCode = 167;
             }
         }
 
-        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event=" + hallCode + "&date=" + year + "-" + month + "-" + sDay;
+        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event="
+                + hallCode + "&date=" + year + "-" + month + "-" + sDay;
 
         List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(1);
         nameValuePairs.add(new BasicNameValuePair("delete_confirm", "Yes"));
@@ -450,6 +591,7 @@ public class DisplayHallInfoActivity extends Activity {
             return true;
         } catch (ClientProtocolException e) {
             // TODO Auto-generated catch block
+            Log.e(TAG, "ClientProtocolException in netCancelHall()");
             e.printStackTrace();
             return false;
         } catch (IOException e) {
@@ -459,9 +601,20 @@ public class DisplayHallInfoActivity extends Activity {
         }
     }
 
-    protected static String[] localPutHallBooking(SharedPreferences settings, Date day, boolean firstHall, boolean vegetarian) {
+    /**
+     * Sets a booking locally on the device.
+     *
+     * @param settings - the SharedPreferences object for the application.
+     * @param day - the day to book locally.
+     * @param firstHall - true if first hall, false if formal (cafeteria hall is treated as first)
+     * @param vegetarian - true if vegetarian meal is required
+     * @return String[2] - an array of the day booked and the type of hall
+     */
+    protected static String[] localPutHallBooking(SharedPreferences settings,
+            Date day, boolean firstHall, boolean vegetarian) {
         String veggie = vegetarian ? " - Vegetarian" : "";
-        String hallType = firstHall ? "First Hall" + veggie : "Formal Hall" + veggie;
+        String hallType = firstHall ? "First Hall" + veggie : "Formal Hall"
+                + veggie;
         String dayString = format.format(day);
         SharedPreferences.Editor editor = settings.edit();
 
@@ -475,25 +628,53 @@ public class DisplayHallInfoActivity extends Activity {
         return result;
     }
 
-    private static String localGetHallBooking(SharedPreferences settings, Date day) {
+    /**
+     * Fetches the type of booking currently stored on the device for a specified day.
+     *
+     * @param settings - the SharedPreferences object for the application.
+     * @param day - the day to retrieve
+     * @return String - No Hall, First Hall, or Formal Hall
+     */
+    private static String localGetHallBooking(SharedPreferences settings,
+            Date day) {
         return settings.getString(format.format(day), "No Hall");
     }
 
-    protected static void localCancelHallBooking(SharedPreferences settings, Date day) {
+    /**
+     * Cancels hall in the local device (removes it from the preferences).
+     *
+     * <b>This does not affect the server</b>.
+     *
+     * @param settings - SharedPreferences for the application
+     * @param day - the day to cancel
+     */
+    protected static void localCancelHallBooking(SharedPreferences settings,
+            Date day) {
         String dayS = format.format(day);
         SharedPreferences.Editor editor = settings.edit();
         editor.remove(dayS);
         editor.commit();
     }
 
-    public String netGetData(String url) throws ClientProtocolException, IOException {
+    /**
+     * Performs a HTTP GET on the given URL and returns the page's HTML as a string.
+     *
+     * @param url The page to be fetched
+     * @return String The HTML of the page
+     * @throws ClientProtocolException
+     * @throws IOException
+     */
+    public String netGetData(String url) throws ClientProtocolException,
+            IOException {
         HttpGet get = new HttpGet(url);
         HttpResponse resp = httpClient.execute(get, httpContext);
         HttpEntity entity = resp.getEntity();
         return EntityUtils.toString(entity, HTTP.UTF_8);
     }
 
-    public static String netPostData(String url, List<NameValuePair> nameValuePairs) throws ClientProtocolException, IOException {
+    public static String netPostData(String url,
+            List<NameValuePair> nameValuePairs) throws ClientProtocolException,
+            IOException {
         HttpPost post = new HttpPost(url);
         post.setEntity(new UrlEncodedFormEntity(nameValuePairs));
 
@@ -502,51 +683,32 @@ public class DisplayHallInfoActivity extends Activity {
         return EntityUtils.toString(entity, HTTP.UTF_8);
     }
 
-    private class LoginAndPullTask extends AsyncTask<String, Integer, String> {
+    /**
+     * Logs the user into the server using the stored username and password.
+     *
+     * @return String - The success or failure of the login.
+     */
+    //TODO: Change function to remove String return for better error checking.
+    private String netLogin() {
+        Log.d(TAG, "netLogin()");
 
-        @Override
-        protected String doInBackground(String... args) {
-            String result = netLogin(args[0], args[1]);
-
-            return result;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            DisplayHallInfoActivity.tasks.add(this);
-            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "",
-                    "Logging in to Caius Hall Booking", true);
-        }
-
-
-        @Override
-        protected void onProgressUpdate(Integer... progress) {
-
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            globalDialog.dismiss();
-            DisplayHallInfoActivity.tasks.remove(this);
-            new PullBookingsTask().execute(baseURL);
-            localUIToast(result);
-        }
-
-
-    }
-
-    private String netLogin(String crsid, String password) {
+        String crsid = globalSettings.getString("crsid", "");
+        String password = globalSettings.getString("password", "");
 
         try {
-            // Use the custom HttpClient class to trust the raven certificate
-            httpClient = new AdditionalCertHttpClient(getApplicationContext());
-            httpContext = new BasicHttpContext();
-            cookieStore = new BasicCookieStore();
-            httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
-
-            // This URL may change, works currently however
-            //String location = "https://raven.cam.ac.uk/auth/authenticate.html?ver=1&url=https%3a%2f%2fwww.cai.cam.ac.uk%2fmealbookings%2f";
             String location = "https://raven.cam.ac.uk/auth/authenticate2.html";
+//            HttpGet get = new HttpGet(baseURL);
+//            HttpResponse resp = httpClient.execute(get, httpContext);
+//            int code = resp.getStatusLine().getStatusCode();
+//            if (code == 302){
+//                location = resp.getFirstHeader("Location").getValue();
+//            } else if (code == 200) {
+//                Log.w(TAG, "Expected 302 header but found 200, already logged in?");
+//                return "Already logged in";
+//            } else {
+//                Log.e(TAG, "Unknown status code recieved on retrieval");
+//                return "Received an unknown status code";
+//            }
 
             HttpPost post = new HttpPost(location);
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(5);
@@ -570,12 +732,12 @@ public class DisplayHallInfoActivity extends Activity {
             if (error != null) {
                 return "Something went wrong when logging in: " + error.text();
             } else {
-                loggedIn = true;
                 return "Successfully logged in";
             }
 
         } catch (ClientProtocolException e) {
             e.printStackTrace();
+            Log.e(TAG, "ClientProtocolException in netLogin()");
             return "ClientProtocol error";
         } catch (IOException e) {
             e.printStackTrace();
@@ -584,13 +746,29 @@ public class DisplayHallInfoActivity extends Activity {
 
     }
 
+    /**
+     * A task to pull all bookings from the server and sync them with the local device.
+     *
+     * If any differences are found, the server values will take priority (to prevent false information shown locally).
+     *
+     * @see netPullBookings
+     */
     private class PullBookingsTask extends AsyncTask<String, Integer, Boolean> {
 
         @Override
         protected Boolean doInBackground(String... params) {
 
+            if (!netIsLoggedIn()){
+                netLogin();
+            }
+
+            if (!netIsLoggedIn()){
+                Log.e("Login error", "Should be logged in, something wrong (PullBookingsTask)");
+                return false;
+            }
+
             try {
-                return netPullBookings(params[0]);
+                return netPullBookings();
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -605,14 +783,14 @@ public class DisplayHallInfoActivity extends Activity {
         @Override
         protected void onPreExecute() {
             DisplayHallInfoActivity.tasks.add(this);
-            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this, "",
-                    "Fetching bookings from server", true);
+            globalDialog = ProgressDialog.show(DisplayHallInfoActivity.this,
+                    "", "Fetching bookings from server", true);
         }
 
         @Override
         protected void onPostExecute(Boolean result) {
             super.onPostExecute(result);
-            if (!result){
+            if (!result) {
                 localUIToast("Something went wrong when pulling multiple bookings from the server");
             }
             localUIUpdateDatesShown();
@@ -621,22 +799,33 @@ public class DisplayHallInfoActivity extends Activity {
             globalDialog.dismiss();
         }
 
-
-
     }
 
-    private boolean netPullOneBooking(Date date) throws IOException, ParseException{
-        // Parse the date into a readable string, the same as the one on the server
+    /**
+     * Fetches the supplied date and syncs it with the local device.
+     *
+     * Similar to {@link netPullBookings}, but less intensive when only one booking is required (such as for verification).
+     *
+     * @param date - the date to pull
+     * @return boolean - true if booking was found for the date given, false otherwise
+     * @throws IOException
+     * @throws ParseException
+     */
+    private boolean netPullOneBooking(Date date) throws IOException, ParseException {
+        // Parse the date into a readable string, the same as the one on the
+        // server
         String dateString = formatPretty.format(date);
 
         // Connect to the server, find the required link
         String docHtml = netGetData(baseURL);
         Document doc = Jsoup.parse(docHtml);
-        String linkSelector = "table.list tr:contains(" + dateString + ") a:contains(View/Edit) ";
+        String linkSelector = "table.list tr:contains(" + dateString
+                + ") a:contains(View/Edit) ";
         Element link = doc.select(linkSelector).first();
 
-        if (link == null){
-            // Date is not currently booked on the server, cancel local booking and return false
+        if (link == null) {
+            // Date is not currently booked on the server, cancel local booking
+            // and return false
             localCancelHallBooking(globalSettings, date);
             Log.w(TAG, "No hall booking found on server for " + dateString);
             return false;
@@ -646,27 +835,38 @@ public class DisplayHallInfoActivity extends Activity {
             Document page = Jsoup.parse(pageHtml);
 
             // Gather details of the booking
-            String dateBooking = page.select("table.list td:contains(Date) ~ td").first().text();
+            String dateBooking = page
+                    .select("table.list td:contains(Date) ~ td").first().text();
             Date theDate = formatPretty.parse(dateBooking);
             String hallType = page.select("h1").first().text();
             Boolean firstHall = hallType.indexOf("First") != -1;
-            Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
+            Boolean veggie = Integer.parseInt(page
+                    .select("table.list td:contains(Vegetarians) ~ td").first()
+                    .text()) > 0;
 
             // Add it to the local settings
             localPutHallBooking(globalSettings, theDate, firstHall, veggie);
 
-            Log.i(TAG, "Booking on server for " + dateString + " was " + hallType + " + veggie=" + veggie);
+            Log.i(TAG, "Booking on server for " + dateString + " was "
+                    + hallType + " + veggie=" + veggie);
             return true;
         }
     }
 
-    private boolean netPullBookings(String url) throws IOException, ParseException{
+    /**
+     * Function to pull all bookings from the server and sync to the local device.
+     *
+     * @return boolean - true on success
+     * @throws IOException
+     * @throws ParseException
+     * @see PullBookingsTask
+     */
+    private boolean netPullBookings() throws IOException,
+            ParseException {
 
-        if (!loggedIn){
-            return false;
-        }
+        Log.d(TAG, "netPullBookings();");
 
-        String bookingsHtml = netGetData(url);
+        String bookingsHtml = netGetData(baseURL);
 
         Document doc = Jsoup.parse(bookingsHtml);
 
@@ -680,28 +880,32 @@ public class DisplayHallInfoActivity extends Activity {
 
             String linkHtml;
             Document page;
-            for (Element link : links){
-                linkHtml = netGetData(url + link.attr("href"));
+            for (Element link : links) {
+                linkHtml = netGetData(baseURL + link.attr("href"));
                 page = Jsoup.parse(linkHtml);
                 if (page == null) {
                     return false;
                 } else {
-                    String date = page.select("table.list td:contains(Date) ~ td").first().text();
+                    String date = page
+                            .select("table.list td:contains(Date) ~ td")
+                            .first().text();
                     Date theDate = formatPretty.parse(date);
                     String hallType = page.select("h1").first().text();
-                    Boolean firstHall = hallType.indexOf("First") != -1;
-                    Boolean veggie = Integer.parseInt(page.select("table.list td:contains(Vegetarians) ~ td").first().text()) > 0;
-                    bookingDates.add(localPutHallBooking(globalSettings, theDate, firstHall, veggie)[0]);
+                    Boolean firstHall = hallType.indexOf("First") != -1 || hallType.indexOf("Cafeteria") != -1;
+                    Boolean veggie = Integer.parseInt(page
+                            .select("table.list td:contains(Vegetarians) ~ td")
+                            .first().text()) > 0;
+                    bookingDates.add(localPutHallBooking(globalSettings,
+                            theDate, firstHall, veggie)[0]);
                 }
 
             }
 
-            //clear all local bookings that were not on the server
+            // clear all local bookings that were not on the server
             Set<String> allSettingKeys = globalSettings.getAll().keySet();
 
-
-            for (String key : allSettingKeys){
-                if (key.indexOf("20") != -1 && !(bookingDates.contains(key))){
+            for (String key : allSettingKeys) {
+                if (key.indexOf("20") != -1 && !(bookingDates.contains(key))) {
                     globalSettingsEditor.remove(key);
                 }
             }
@@ -710,10 +914,14 @@ public class DisplayHallInfoActivity extends Activity {
             return true;
         }
 
-
-
     }
 
+    /**
+     * Finds the next available date of the given day.
+     *
+     * @param requiredDay - the day to be found
+     * @return Date - the specific date of the next occurence of {@link requiredDay}
+     */
     protected static Date futureDay(int requiredDay) {
         Calendar requiredDate = new GregorianCalendar();
         int today = requiredDate.get(Calendar.DAY_OF_WEEK);
@@ -736,28 +944,23 @@ public class DisplayHallInfoActivity extends Activity {
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item){
+    public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
         case R.id.menu_preferences:
-                Intent intent = new Intent(this, PrefsActivity.class);
-                startActivity(intent);
-                break;
+            Intent intent = new Intent(this, PrefsActivity.class);
+            startActivity(intent);
+            break;
         case R.id.menu_refresh:
-                if (!loggedIn){
-                    String crsid = globalSettings.getString("crsid", "");
-                    String password = globalSettings.getString("password", "");
-                    new LoginAndPullTask().execute(crsid, password);
-                } else {
-                    new PullBookingsTask().execute(baseURL);
-                }
-                break;
+            new PullBookingsTask().execute();
+            break;
         case R.id.menu_print_settings:
-                Log.i("GLOBALSETTINGS", globalSettings.getAll().toString());
-                Log.i("DEV", httpContext.toString());
-                Log.i("DEV", httpClient.getParams().toString());
-                Log.i("DEV", cookieStore.getCookies().toString());
-                localUIToast("revision: " + globalSettings.getString("app_revision", "unknown"));
-                break;
+            Log.i("GLOBALSETTINGS", globalSettings.getAll().toString());
+            Log.i("DEV", httpContext.toString());
+            Log.i("DEV", httpClient.getParams().toString());
+            Log.i("DEV", cookieStore.getCookies().toString());
+            localUIToast("revision: "
+                    + globalSettings.getString("app_revision", "unknown"));
+            break;
         }
         return false;
     }
