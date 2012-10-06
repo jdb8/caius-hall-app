@@ -299,7 +299,7 @@ public class DisplayHallInfoActivity extends Activity {
         values = new ArrayList<String>();
         Calendar day = Calendar.getInstance();
         Date date = day.getTime();
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < 5; i++) {
             values.add(formatPretty.format(date));
             day.add(Calendar.DAY_OF_MONTH, 1);
             date = day.getTime();
@@ -944,6 +944,7 @@ public class DisplayHallInfoActivity extends Activity {
             Log.i("DEV", httpContext.toString());
             Log.i("DEV", httpClient.getParams().toString());
             Log.i("DEV", cookieStore.getCookies().toString());
+            localUIToast("settings: " + globalSettings.getAll().size());
             localUIToast("revision: "
                     + globalSettings.getString("app_revision", "unknown"));
             break;
