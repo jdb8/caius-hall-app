@@ -65,14 +65,17 @@ public class HallBookService extends IntentService {
             for (int day : days) {
                 theDay = DisplayHallInfoActivity.futureDay(day);
                 if (dayTypes.get(day).equals("first")){
-                    DisplayHallInfoActivity.netBookHall(theDay, true, veggie);
-                    DisplayHallInfoActivity.localPutHallBooking(settings, theDay, true, veggie);
+                    if (DisplayHallInfoActivity.netBookHall(theDay, true, veggie)){
+                        DisplayHallInfoActivity.localPutHallBooking(settings, theDay, true, veggie);;
+                    }
                 } else if (dayTypes.get(day).equals("formal")){
-                    DisplayHallInfoActivity.netBookHall(theDay, false, veggie);
-                    DisplayHallInfoActivity.localPutHallBooking(settings, theDay, false, veggie);
+                    if(DisplayHallInfoActivity.netBookHall(theDay, false, veggie)){
+                        DisplayHallInfoActivity.localPutHallBooking(settings, theDay, false, veggie);
+                    }
                 } else if (dayTypes.get(day).equals("noHall")){
-                    DisplayHallInfoActivity.netCancelHall(theDay);
-                    DisplayHallInfoActivity.localCancelHallBooking(settings, theDay);
+                    if(DisplayHallInfoActivity.netCancelHall(theDay)){
+                        DisplayHallInfoActivity.localCancelHallBooking(settings, theDay);
+                    }
                 }
             }
             return false;
