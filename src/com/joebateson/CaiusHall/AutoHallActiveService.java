@@ -28,7 +28,7 @@ public class AutoHallActiveService extends Service {
         booker.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent recurringBooking = PendingIntent.getBroadcast(context, 0, booker, PendingIntent.FLAG_CANCEL_CURRENT);
         AlarmManager alarms = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        alarms.setInexactRepeating(AlarmManager.RTC_WAKEUP, updateTime.getTimeInMillis(), AlarmManager.INTERVAL_DAY, recurringBooking);
+        alarms.setRepeating(AlarmManager.RTC_WAKEUP, updateTime.getTimeInMillis(), AlarmManager.INTERVAL_DAY, recurringBooking);
         Log.i("HALLSERVICE", "set recurring alarm");
     }
 
