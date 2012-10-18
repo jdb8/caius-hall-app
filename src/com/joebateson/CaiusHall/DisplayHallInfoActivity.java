@@ -251,13 +251,28 @@ public class DisplayHallInfoActivity extends Activity {
 
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
         Adapter adapter = listAdapter;
-
+        
+        // Get the day that was selected, as a Date object
         selectedDay = (Date) adapter.getItem(info.position);
+        
+        // Set the heading for the menu
         menu.setHeaderTitle(formatPretty.format(selectedDay));
+        
+        // Initialise a calendar to extract the day
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(selectedDay);
+        
+        // Check for saturday - if so, display an altered menu
+        if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
+            menu.add(1, 1, 0, "Book cafeteria hall");
+            menu.add(1, 3, 1, "No hall");
+        } else {
+            menu.add(1, 1, 0, "Book first hall");
+            menu.add(1, 2, 0, "Book formal hall");
+            menu.add(1, 3, 0, "No hall");
+        }
 
-        menu.add(1, 1, 0, "Book first hall");
-        menu.add(1, 2, 0, "Book formal hall");
-        menu.add(1, 3, 0, "No hall");
+        
     }
 
     @Override
@@ -825,7 +840,7 @@ public class DisplayHallInfoActivity extends Activity {
                     .select("table.list td:contains(Date) ~ td").first().text();
             Date theDate = formatPretty.parse(dateBooking);
             String hallType = page.select("h1").first().text();
-            Boolean firstHall = hallType.indexOf("First") != -1;
+            Boolean firstHall = hallType.indexOf("First") != -1 || hallType.indexOf("Cafeteria") != -1;
             Boolean veggie = Integer.parseInt(page
                     .select("table.list td:contains(Vegetarians) ~ td").first()
                     .text()) > 0;
