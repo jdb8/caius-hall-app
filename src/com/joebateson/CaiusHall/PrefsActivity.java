@@ -15,6 +15,8 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -42,16 +44,24 @@ public class PrefsActivity extends PreferenceActivity implements OnSharedPrefere
 
     public ProgressDialog globalDialog;
     private Preference updateCheckPref;
+    
+    private GoogleAnalyticsTracker tracker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.xml.prefs);
+        tracker = GoogleAnalyticsTracker.getInstance();
+        tracker.startNewSession("UA-35696884-1", this);
+        
+        tracker.trackPageView("/prefsScreen");
+        tracker.dispatch();
     }
 
     @Override
     protected void onResume(){
-        super.onResume();
+        super.onResume();        
+        
         // Set up a listener whenever a key changes
         getPreferenceScreen().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
 
@@ -85,6 +95,13 @@ public class PrefsActivity extends PreferenceActivity implements OnSharedPrefere
         if (globalDialog != null) {
             globalDialog.dismiss();
         }
+    }
+    
+    @Override
+    protected void onDestroy() {
+      super.onDestroy();
+      // Stop the tracker when it is no longer needed.
+      tracker.stopSession();
     }
 
     @Override

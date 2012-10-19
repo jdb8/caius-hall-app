@@ -6,6 +6,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
 import android.app.IntentService;
 import android.app.ProgressDialog;
 import android.app.Service;
@@ -17,9 +19,11 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 public class HallBookService extends IntentService {
+    
+    private GoogleAnalyticsTracker tracker;
 
     public HallBookService() {
-        super("HallBookService");
+        super("HallBookService");       
     }
 
     private class BookAllDesiredHallsTask extends AsyncTask<String, Void, Boolean> {
@@ -66,24 +70,32 @@ public class HallBookService extends IntentService {
                 theDay = DisplayHallInfoActivity.futureDay(day);
                 if (dayTypes.get(day).equals("first")){
                     if (DisplayHallInfoActivity.netBookHall(theDay, true, veggie)){
-                        DisplayHallInfoActivity.localPutHallBooking(settings, theDay, true, veggie);;
+                        DisplayHallInfoActivity.localPutHallBooking(settings, theDay, true, veggie);
+                        tracker.trackEvent("Application events", "Auto booking", "First/Cafeteria", 0);
                     }
                 } else if (dayTypes.get(day).equals("formal")){
                     if(DisplayHallInfoActivity.netBookHall(theDay, false, veggie)){
                         DisplayHallInfoActivity.localPutHallBooking(settings, theDay, false, veggie);
+                        tracker.trackEvent("Application events", "Auto booking", "Formal", 0);
                     }
                 } else if (dayTypes.get(day).equals("noHall")){
                     if(DisplayHallInfoActivity.netCancelHall(theDay)){
                         DisplayHallInfoActivity.localCancelHallBooking(settings, theDay);
+                        tracker.trackEvent("Application events", "Auto cancellation", "", 0);
                     }
                 }
             }
+            tracker.dispatch();
+            tracker.stopSession();
             return false;
         }
-    }
+    }   
+    
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        new BookAllDesiredHallsTask().execute();
+        tracker = GoogleAnalyticsTracker.getInstance();
+        tracker.startNewSession("UA-35696884-1", this); 
+        new BookAllDesiredHallsTask().execute(); 
     }
 }

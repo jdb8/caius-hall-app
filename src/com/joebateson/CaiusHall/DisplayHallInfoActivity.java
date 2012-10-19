@@ -38,6 +38,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -59,6 +61,9 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 public class DisplayHallInfoActivity extends Activity {
+    
+    // Less malicious than it sounds
+    private static GoogleAnalyticsTracker tracker;
 
     public static final String TAG = "CaiusHall";
 
@@ -175,6 +180,12 @@ public class DisplayHallInfoActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        tracker = GoogleAnalyticsTracker.getInstance();
+        tracker.startNewSession("UA-35696884-1", this);
+        
+        tracker.trackPageView("/mainActivity");        
+        tracker.dispatch();
 
         setContentView(R.layout.hall_list);
 
@@ -204,6 +215,13 @@ public class DisplayHallInfoActivity extends Activity {
             }
         }
     }
+    
+    @Override
+    protected void onDestroy() {
+      super.onDestroy();
+      // Stop the tracker when it is no longer needed.
+      tracker.stopSession();
+    }
 
     @Override
     public void onResume() {
@@ -219,8 +237,9 @@ public class DisplayHallInfoActivity extends Activity {
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
         } else {
+            
             localUIUpdateDatesShown();
-            localUIUpdateBookingStatus();
+            localUIUpdateBookingStatus();            
         }
 
     }
@@ -279,15 +298,19 @@ public class DisplayHallInfoActivity extends Activity {
     public boolean onContextItemSelected(MenuItem item) {
         switch (item.getItemId()) {
         case 1:
+            tracker.trackEvent("User actions", "Manual booking", "First/Cafeteria", 0);
             new BookHallTask(selectedDay, true, globalSettings.getBoolean("veggie", false)).execute();
             break;
         case 2:
+            tracker.trackEvent("User actions", "Manual booking", "Formal", 0);
             new BookHallTask(selectedDay, false, globalSettings.getBoolean("veggie", false)).execute();
             break;
         case 3:
+            tracker.trackEvent("User actions", "Manual cancelling", "", 0);
             new CancelHallTask(selectedDay).execute();
             break;
         }
+        tracker.dispatch();
         return false;
     }
 
@@ -732,7 +755,7 @@ public class DisplayHallInfoActivity extends Activity {
             // TODO: make login error checking more robust
             if (error != null) {
                 return "Something went wrong when logging in: " + error.text();
-            } else {
+            } else {                
                 return "Successfully logged in";
             }
 
