@@ -559,12 +559,15 @@ public class DisplayHallInfoActivity extends Activity {
             veggie = "1";
         String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event="
                 + hallCode + "&date=" + year + "-" + month + "-" + sDay;
+        
+        // Get the special requirements set in preferences (Vegan etc.)
+        String requirements = globalSettings.getString("specialRequirements", "");
 
         List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(5);
         nameValuePairs.add(new BasicNameValuePair("guests", "0"));
         nameValuePairs.add(new BasicNameValuePair("guests_names", ""));
         nameValuePairs.add(new BasicNameValuePair("vegetarians", veggie));
-        nameValuePairs.add(new BasicNameValuePair("requirements", ""));
+        nameValuePairs.add(new BasicNameValuePair("requirements", requirements));
         nameValuePairs.add(new BasicNameValuePair("update", "Create"));
 
         try {

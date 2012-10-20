@@ -27,6 +27,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.CheckBoxPreference;
+import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceClickListener;
@@ -145,6 +146,9 @@ public class PrefsActivity extends PreferenceActivity implements OnSharedPrefere
             } else {
                 stopService(new Intent(this, AutoHallActiveService.class));
             }
+        } else if (key.equals("specialRequirements")) {
+            EditTextPreference editPreference = (EditTextPreference)preference;
+            editPreference.setSummary(editPreference.getText());
         }
     }
 
