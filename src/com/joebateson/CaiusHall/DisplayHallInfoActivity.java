@@ -704,7 +704,7 @@ public class DisplayHallInfoActivity extends Activity {
      * @throws ClientProtocolException
      * @throws IOException
      */
-    public String netGetData(String url) throws ClientProtocolException,
+    public static String netGetData(String url) throws ClientProtocolException,
             IOException {
         HttpGet get = new HttpGet(url);
         HttpResponse resp = httpClient.execute(get, httpContext);
@@ -838,7 +838,7 @@ public class DisplayHallInfoActivity extends Activity {
      * @throws IOException
      * @throws ParseException
      */
-    private boolean netPullOneBooking(Date date) throws IOException, ParseException {
+    protected static boolean netPullOneBooking(Date date) throws IOException, ParseException {
         // Parse the date into a readable string, the same as the one on the
         // server
         String dateString = formatPretty.format(date);
