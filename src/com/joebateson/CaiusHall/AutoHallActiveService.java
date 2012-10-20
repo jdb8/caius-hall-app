@@ -19,8 +19,15 @@ public class AutoHallActiveService extends Service {
     protected void setRecurringAlarm(Context context) {
 
         Calendar updateTime = Calendar.getInstance();
-        updateTime.add(Calendar.DAY_OF_MONTH, 1);
         updateTime.setTimeZone(TimeZone.getTimeZone("GMT"));
+        
+        // If we are already past 10am, prevent the alarm from firing immediately by
+        // setting the next alarm to be tomorrow.
+        if (updateTime.get(Calendar.HOUR_OF_DAY) > 10) {
+            updateTime.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        
+        // Set the alarm to 'ring' at ~10am
         updateTime.set(Calendar.HOUR_OF_DAY, 10);
         updateTime.set(Calendar.MINUTE, 02);
 
