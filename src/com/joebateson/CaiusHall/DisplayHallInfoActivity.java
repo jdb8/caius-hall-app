@@ -2,7 +2,6 @@ package com.joebateson.CaiusHall;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,11 +12,9 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.StatusLine;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.HttpClient;
@@ -84,6 +81,9 @@ public class DisplayHallInfoActivity extends Activity {
             "yyyyMMdd");
     protected static final SimpleDateFormat formatPretty = new SimpleDateFormat(
             "EEEE d MMMM yyyy");
+    
+    // Hall codes for first, formal, cafeteria (saturday first), sunday formal
+    private static final int[] hallCodes = {200, 201, 206, 202};
 
     private static SharedPreferences globalSettings;
     private SharedPreferences.Editor globalSettingsEditor;
@@ -544,15 +544,15 @@ public class DisplayHallInfoActivity extends Activity {
         String veggie = "0";
         if (!firstHall) {
             if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-                hallCode = 169;
+                hallCode = hallCodes[3];
             } else {
-                hallCode = 168;
+                hallCode = hallCodes[1];
             }
         } else {
             if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
-                hallCode = 172;
+                hallCode = hallCodes[2];
             } else {
-                hallCode = 167;
+                hallCode = hallCodes[0];
             }
         }
         if (vegetarian)
@@ -608,15 +608,15 @@ public class DisplayHallInfoActivity extends Activity {
         int hallCode;
         if (hallTypeCurrentlyBooked.equals("Formal Hall")) {
             if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-                hallCode = 169;
+                hallCode = hallCodes[3];
             } else {
-                hallCode = 168;
+                hallCode = hallCodes[1];
             }
         } else {
             if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
-                hallCode = 172;
+                hallCode = hallCodes[2];
             } else {
-                hallCode = 167;
+                hallCode = hallCodes[0];
             }
         }
 

@@ -31,12 +31,12 @@ public class AdditionalCertHttpClient extends DefaultHttpClient {
         registry.register(new Scheme("https", newSslSocketFactory(), 443));
         return new SingleClientConnManager(getParams(), registry);
     }
-
+    
     protected SSLSocketFactory newSslSocketFactory() {
         try {
             final KeyStore ks = KeyStore.getInstance("BKS");
 
-            final InputStream in = context.getResources().openRawResource(R.raw.mystoreboth);
+            final InputStream in = context.getResources().openRawResource(R.raw.certs);
             try {
                 ks.load(in, ( "badpass" ).toCharArray());
             } finally {
