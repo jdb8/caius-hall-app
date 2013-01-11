@@ -23,12 +23,12 @@ public class AutoHallActiveService extends Service {
         
         // If we are already past 10am, prevent the alarm from firing immediately by
         // setting the next alarm to be tomorrow.
-        if (updateTime.get(Calendar.HOUR_OF_DAY) > 10) {
+        if (updateTime.get(Calendar.HOUR_OF_DAY) > 6) {
             updateTime.add(Calendar.DAY_OF_MONTH, 1);
         }
         
         // Set the alarm to 'ring' at ~10am
-        updateTime.set(Calendar.HOUR_OF_DAY, 10);
+        updateTime.set(Calendar.HOUR_OF_DAY, 6);
         updateTime.set(Calendar.MINUTE, 02);
 
         Intent booker = new Intent(context, HallAutoBookReceiver.class);
