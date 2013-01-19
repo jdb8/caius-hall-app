@@ -562,7 +562,7 @@ public class DisplayHallInfoActivity extends Activity {
         }
         if (vegetarian)
             veggie = "1";
-        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event="
+        String url = baseURL + "?event="
                 + hallCode + "&date=" + year + "-" + month + "-" + sDay;
         
         // Get the special requirements set in preferences (Vegan etc.)
@@ -625,7 +625,7 @@ public class DisplayHallInfoActivity extends Activity {
             }
         }
 
-        String url = "https://www.cai.cam.ac.uk/mealbookings/index.php?event="
+        String url = baseURL+ "?event="
                 + hallCode + "&date=" + year + "-" + month + "-" + sDay;
 
         List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(1);
