@@ -23,6 +23,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.ClientContext;
 import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpParams;
@@ -70,7 +71,7 @@ public class DisplayHallInfoActivity extends Activity {
     private ArrayList<String> details;
 
     private Date selectedDay = null;
-    private static final String baseURL = "https://www.cai.cam.ac.uk/mealbookings/";
+    private static final String baseURL = "http://www.mealbookings.cai.cam.ac.uk/";
 
     // For debugging purposes
     // private String baseURL = "http://192.168.0.9:8888";
@@ -151,12 +152,16 @@ public class DisplayHallInfoActivity extends Activity {
 
             int statusCode = resp.getStatusLine().getStatusCode();
             answer = (statusCode == 200);
+            
+            if (!answer) { Log.w(TAG, "netIsLoggedIn returning false, status code was " + statusCode); }
 
             resp.getEntity().consumeContent();
         } catch (ClientProtocolException e) {
             Log.e(TAG, "ClientProtocolException in netIsLoggedIn()");
             return false;
         } catch (IOException e) {
+            Log.e(TAG, "IOException in netIsLoggedIn() - " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
 
@@ -170,7 +175,7 @@ public class DisplayHallInfoActivity extends Activity {
      */
     private void setUpHttp(){
         if (httpClient == null){
-            httpClient = new AdditionalCertHttpClient(getApplicationContext());
+            httpClient = new DefaultHttpClient();
             httpContext = new BasicHttpContext();
             cookieStore = new BasicCookieStore();
             httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
