@@ -73,9 +73,6 @@ public class DisplayHallInfoActivity extends Activity {
     private Date selectedDay = null;
     private static final String baseURL = "http://www.mealbookings.cai.cam.ac.uk/";
 
-    // For debugging purposes
-    // private String baseURL = "http://192.168.0.9:8888";
-
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
 
     private static final SimpleDateFormat format = new SimpleDateFormat(
@@ -179,6 +176,8 @@ public class DisplayHallInfoActivity extends Activity {
             httpContext = new BasicHttpContext();
             cookieStore = new BasicCookieStore();
             httpContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
+        } else {
+            Log.w(TAG, "httpClient already exists - no need to call setUpHttp()");
         }
     }
 
@@ -294,9 +293,7 @@ public class DisplayHallInfoActivity extends Activity {
             menu.add(1, 1, 0, "Book first hall");
             menu.add(1, 2, 0, "Book formal hall");
             menu.add(1, 3, 0, "No hall");
-        }
-
-        
+        }        
     }
 
     @Override
@@ -519,6 +516,53 @@ public class DisplayHallInfoActivity extends Activity {
         }
 
     }
+    
+    /**
+     * Returns a string representing the url for the specified hall booking page.
+     * 
+     * @param date the date of the booking
+     * @param firstHall true if the booking is first hall (or cafeteria), false otherwise 
+     * @return String representing the specified hall booking page
+     */
+    private static String buildBookingURL(Date date, boolean firstHall) {
+        // Create a new calendar object set to the specified date
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        
+        // Get the year, month and day
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH) + 1; // Months are indexed with january as 0
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+        
+        String sMonth = (month < 10) ? ("0" + month) : "" + month;
+        String sDay = (day < 10) ? ("0" + day) : "" + day;
+        
+        // Get the correct code for the type of booking
+        int hallCode;
+        if (!firstHall) {
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                // Sunday formal
+                hallCode = hallCodes[3];
+            } else {
+                // Formal
+                hallCode = hallCodes[1];
+            }
+        } else {
+            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
+                // Cafeteria
+                hallCode = hallCodes[2];
+            } else {
+                // First
+                hallCode = hallCodes[0];
+            }
+        }
+        
+        // Create url to access hall booking page
+        String url = baseURL + "?event="
+                + hallCode + "&date=" + year + "-" + sMonth + "-" + sDay;
+        
+        return url;
+    }
 
     /**
      * Books hall for a specific day.
@@ -535,35 +579,9 @@ public class DisplayHallInfoActivity extends Activity {
             // Already made a booking, return false
             return false;
         }
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(date);
-        int year = calendar.get(Calendar.YEAR);
-        String month = new String[] { "01", "02", "03", "04", "05", "06", "07",
-                "08", "09", "10", "11", "12" }[calendar.get(Calendar.MONTH)];
-        int day = calendar.get(Calendar.DAY_OF_MONTH);
-
-        String format = String.format("%%0%dd", 2);
-        String sDay = String.format(format, day);
-        int hallCode;
-        String veggie = "0";
-        if (!firstHall) {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-                hallCode = hallCodes[3];
-            } else {
-                hallCode = hallCodes[1];
-            }
-        } else {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
-                hallCode = hallCodes[2];
-            } else {
-                hallCode = hallCodes[0];
-            }
-        }
-        if (vegetarian)
-            veggie = "1";
-        String url = baseURL + "?event="
-                + hallCode + "&date=" + year + "-" + month + "-" + sDay;
+        
+        String veggie = (vegetarian) ? "1" : "0";
+        String url = buildBookingURL(date, firstHall);
         
         // Get the special requirements set in preferences (Vegan etc.)
         String requirements = globalSettings.getString("specialRequirements", "");
@@ -598,35 +616,11 @@ public class DisplayHallInfoActivity extends Activity {
         if (hallTypeCurrentlyBooked.equals("No Hall")) {
             // No booking to cancel
             return true;
-        }
+        }        
+        
+        boolean firstHall = (hallTypeCurrentlyBooked.contains("First"));
 
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(date);
-        int year = calendar.get(Calendar.YEAR);
-        String month = new String[] { "01", "02", "03", "04", "05", "06", "07",
-                "08", "09", "10", "11", "12" }[calendar.get(Calendar.MONTH)];
-        int day = calendar.get(Calendar.DAY_OF_MONTH);
-
-        String format = String.format("%%0%dd", 2);
-        String sDay = String.format(format, day);
-
-        int hallCode;
-        if (hallTypeCurrentlyBooked.equals("Formal Hall")) {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-                hallCode = hallCodes[3];
-            } else {
-                hallCode = hallCodes[1];
-            }
-        } else {
-            if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
-                hallCode = hallCodes[2];
-            } else {
-                hallCode = hallCodes[0];
-            }
-        }
-
-        String url = baseURL+ "?event="
-                + hallCode + "&date=" + year + "-" + month + "-" + sDay;
+        String url = buildBookingURL(date, firstHall);
 
         List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(1);
         nameValuePairs.add(new BasicNameValuePair("delete_confirm", "Yes"));
