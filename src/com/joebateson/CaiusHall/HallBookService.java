@@ -17,11 +17,11 @@ import android.util.Log;
 import android.util.SparseArray;
 
 public class HallBookService extends IntentService {
-    
+
     private GoogleAnalyticsTracker tracker;
 
     public HallBookService() {
-        super("HallBookService");       
+        super("HallBookService");
     }
 
     private class BookAllDesiredHallsTask extends AsyncTask<String, Void, Boolean> {
@@ -62,7 +62,7 @@ public class HallBookService extends IntentService {
                     dayTypes.put(day, "formal");
                 }
             }
-            
+
             Calendar cal = Calendar.getInstance();
             Date theDay;
             int weekday;
@@ -73,8 +73,8 @@ public class HallBookService extends IntentService {
             for (int i = 0; i < 5; i++) {
                 weekday = cal.get(Calendar.DAY_OF_WEEK);
                 action = dayTypes.get(weekday);
-                theDay = cal.getTime();                
-                try {                    
+                theDay = cal.getTime();
+                try {
                     if (action.equals("first")){
                         DisplayHallInfoActivity.netBookHall(theDay, true, veggie);
                         returnStatus = DisplayHallInfoActivity.netPullOneBooking(theDay);
@@ -84,25 +84,23 @@ public class HallBookService extends IntentService {
                         returnStatus = DisplayHallInfoActivity.netPullOneBooking(theDay);
                         if (returnStatus) tracker.trackEvent("Application events", "Auto booking", "Formal", 0);
                     } else if (action.equals("noHall")){
-                        DisplayHallInfoActivity.netCancelHall(theDay);
-                        // should be false since we cancelled it! If false set returnStatus to true
-                        returnStatus = !DisplayHallInfoActivity.netPullOneBooking(theDay);
-                        if (returnStatus) tracker.trackEvent("Application events", "Auto cancellation", "", 0);
+                        // Do nothing, we don't want to override the user's bookings
+                        returnStatus = true;
                     } else {
                         // A setting was not set properly?
                         Log.e("CaiusHall", "Autohall day property not set for " + theDay.toString());
                         returnStatus = false;
                     }
-                    
+
                 } catch (Exception e) {
                     returnStatus = false;
                 }
-                                
+
                 // If return status is false, increase the failure count by 1
                 failures += (returnStatus) ? 0 : 1;
                 cal.add(Calendar.DAY_OF_YEAR, 1);
             }
-            
+
             tracker.dispatch();
             tracker.stopSession();
             // allow for one failure, either the first or the last day
@@ -112,7 +110,7 @@ public class HallBookService extends IntentService {
         @Override
         protected void onPostExecute(Boolean result) {
             super.onPostExecute(result);
-            
+
             // Post a notification letting the user know the autobooker has done its work
             String content = result ? "Success!" : "There were one or more errors";
             Notification noti = new NotificationCompat.Builder(getApplicationContext())
@@ -125,13 +123,13 @@ public class HallBookService extends IntentService {
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             mNotificationManager.notify(8008135, noti);
         }
-    }   
-    
+    }
+
 
     @Override
     protected void onHandleIntent(Intent intent) {
         tracker = GoogleAnalyticsTracker.getInstance();
-        tracker.startNewSession("UA-35696884-1", this); 
-        new BookAllDesiredHallsTask().execute(); 
+        tracker.startNewSession("UA-35696884-1", this);
+        new BookAllDesiredHallsTask().execute();
     }
 }
