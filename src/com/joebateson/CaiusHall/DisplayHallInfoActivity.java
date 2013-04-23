@@ -73,7 +73,7 @@ public class DisplayHallInfoActivity extends Activity {
     private ArrayList<String> details;
 
     private Date selectedDay = null;
-    private static final String baseURL = "http://www.mealbookings.cai.cam.ac.uk/";
+    private static final String baseURL = "https://www.mealbookings.cai.cam.ac.uk/";
 
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
 
@@ -83,7 +83,7 @@ public class DisplayHallInfoActivity extends Activity {
             "EEEE d MMMM yyyy");
 
     // Hall codes for first, formal, cafeteria (saturday first), sunday formal
-    private static final int[] hallCodes = {200, 201, 206, 202};
+    private static final int[] hallCodes = {233, 234, 239, 235};
 
     private static SharedPreferences globalSettings;
     private SharedPreferences.Editor globalSettingsEditor;
