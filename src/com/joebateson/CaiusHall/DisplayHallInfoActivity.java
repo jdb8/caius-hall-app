@@ -59,7 +59,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 public class DisplayHallInfoActivity extends Activity {
-    
+
     // Less malicious than it sounds
     private static GoogleAnalyticsTracker tracker;
 
@@ -79,9 +79,9 @@ public class DisplayHallInfoActivity extends Activity {
             "yyyyMMdd");
     protected static final SimpleDateFormat formatPretty = new SimpleDateFormat(
             "EEEE d MMMM yyyy");
-    
+
     // Hall codes for first, formal, cafeteria (saturday first), sunday formal
-    private static final int[] hallCodes = {200, 201, 206, 202};
+    private static final int[] hallCodes = {233, 234, 239, 235};
 
     private static SharedPreferences globalSettings;
     private SharedPreferences.Editor globalSettingsEditor;
@@ -149,7 +149,7 @@ public class DisplayHallInfoActivity extends Activity {
 
             int statusCode = resp.getStatusLine().getStatusCode();
             answer = (statusCode == 200);
-            
+
             if (!answer) { Log.w(TAG, "netIsLoggedIn returning false, status code was " + statusCode); }
 
             resp.getEntity().consumeContent();
@@ -184,11 +184,11 @@ public class DisplayHallInfoActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         tracker = GoogleAnalyticsTracker.getInstance();
         tracker.startNewSession("UA-35696884-1", this);
-        
-        tracker.trackPageView("/mainActivity");        
+
+        tracker.trackPageView("/mainActivity");
         tracker.dispatch();
 
         setContentView(R.layout.hall_list);
@@ -219,7 +219,7 @@ public class DisplayHallInfoActivity extends Activity {
             }
         }
     }
-    
+
     @Override
     protected void onDestroy() {
       super.onDestroy();
@@ -241,9 +241,9 @@ public class DisplayHallInfoActivity extends Activity {
             Intent intent = new Intent(this, PrefsActivity.class);
             startActivity(intent);
         } else {
-            
+
             localUIUpdateDatesShown();
-            localUIUpdateBookingStatus();            
+            localUIUpdateBookingStatus();
         }
 
     }
@@ -274,17 +274,17 @@ public class DisplayHallInfoActivity extends Activity {
 
         AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
         Adapter adapter = listAdapter;
-        
+
         // Get the day that was selected, as a Date object
         selectedDay = (Date) adapter.getItem(info.position);
-        
+
         // Set the heading for the menu
         menu.setHeaderTitle(formatPretty.format(selectedDay));
-        
+
         // Initialise a calendar to extract the day
         Calendar cal = Calendar.getInstance();
         cal.setTime(selectedDay);
-        
+
         // Check for saturday - if so, display an altered menu
         if (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
             menu.add(1, 1, 0, "Book cafeteria hall");
@@ -293,7 +293,7 @@ public class DisplayHallInfoActivity extends Activity {
             menu.add(1, 1, 0, "Book first hall");
             menu.add(1, 2, 0, "Book formal hall");
             menu.add(1, 3, 0, "No hall");
-        }        
+        }
     }
 
     @Override
@@ -516,27 +516,27 @@ public class DisplayHallInfoActivity extends Activity {
         }
 
     }
-    
+
     /**
      * Returns a string representing the url for the specified hall booking page.
-     * 
+     *
      * @param date the date of the booking
-     * @param firstHall true if the booking is first hall (or cafeteria), false otherwise 
+     * @param firstHall true if the booking is first hall (or cafeteria), false otherwise
      * @return String representing the specified hall booking page
      */
     private static String buildBookingURL(Date date, boolean firstHall) {
         // Create a new calendar object set to the specified date
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
-        
+
         // Get the year, month and day
         int year = calendar.get(Calendar.YEAR);
         int month = calendar.get(Calendar.MONTH) + 1; // Months are indexed with january as 0
         int day = calendar.get(Calendar.DAY_OF_MONTH);
-        
+
         String sMonth = (month < 10) ? ("0" + month) : "" + month;
         String sDay = (day < 10) ? ("0" + day) : "" + day;
-        
+
         // Get the correct code for the type of booking
         int hallCode;
         if (!firstHall) {
@@ -556,11 +556,11 @@ public class DisplayHallInfoActivity extends Activity {
                 hallCode = hallCodes[0];
             }
         }
-        
+
         // Create url to access hall booking page
         String url = baseURL + "?event="
                 + hallCode + "&date=" + year + "-" + sMonth + "-" + sDay;
-        
+
         return url;
     }
 
@@ -579,10 +579,10 @@ public class DisplayHallInfoActivity extends Activity {
             // Already made a booking, return false
             return false;
         }
-        
+
         String veggie = (vegetarian) ? "1" : "0";
         String url = buildBookingURL(date, firstHall);
-        
+
         // Get the special requirements set in preferences (Vegan etc.)
         String requirements = globalSettings.getString("specialRequirements", "");
 
@@ -616,8 +616,8 @@ public class DisplayHallInfoActivity extends Activity {
         if (hallTypeCurrentlyBooked.equals("No Hall")) {
             // No booking to cancel
             return true;
-        }        
-        
+        }
+
         boolean firstHall = (hallTypeCurrentlyBooked.contains("First"));
 
         String url = buildBookingURL(date, firstHall);
@@ -757,7 +757,7 @@ public class DisplayHallInfoActivity extends Activity {
             // TODO: make login error checking more robust
             if (error != null) {
                 return "Something went wrong when logging in: " + error.text();
-            } else {                
+            } else {
                 return "Successfully logged in";
             }
 
