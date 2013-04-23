@@ -71,7 +71,7 @@ public class DisplayHallInfoActivity extends Activity {
     private ArrayList<String> details;
 
     private Date selectedDay = null;
-    private static final String baseURL = "http://www.mealbookings.cai.cam.ac.uk/";
+    private static final String baseURL = "https://www.mealbookings.cai.cam.ac.uk/";
 
     private static String mealBookingIndexHtml = "<h1>Default html</h1>";
 
