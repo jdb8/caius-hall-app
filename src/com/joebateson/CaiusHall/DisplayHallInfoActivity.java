@@ -58,6 +58,8 @@ import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.android.apps.analytics.GoogleAnalyticsTracker;
+
 public class DisplayHallInfoActivity extends Activity {
 
     // Less malicious than it sounds
@@ -102,7 +104,7 @@ public class DisplayHallInfoActivity extends Activity {
      * @return String The string which refers to the current git commit.
      * @see <a href="http://www.tristanwaddington.com/2011/07/update-hg-or-git-changest-during-android-build/">http://www.tristanwaddington.com/2011/07/update-hg-or-git-changest-during-android-build/</a>
      */
-    public String getAppChangsetFromPropertiesFile() {
+    public String getAppChangesetFromPropertiesFile() {
         Resources resources = getResources();
 
         try {
@@ -200,7 +202,7 @@ public class DisplayHallInfoActivity extends Activity {
         globalSettingsEditor = globalSettings.edit();
 
         globalSettingsEditor.putString("app_revision",
-                this.getAppChangsetFromPropertiesFile());
+                this.getAppChangesetFromPropertiesFile());
         globalSettingsEditor.commit();
 
         final Object[] data = (Object[]) getLastNonConfigurationInstance();
@@ -323,10 +325,9 @@ public class DisplayHallInfoActivity extends Activity {
      */
     protected void localUIToast(String message) {
         Context context = getApplicationContext();
-        CharSequence text = message;
         int duration = Toast.LENGTH_LONG;
 
-        Toast toast = Toast.makeText(context, text, duration);
+        Toast toast = Toast.makeText(context, message, duration);
         toast.show();
     }
 
@@ -558,10 +559,7 @@ public class DisplayHallInfoActivity extends Activity {
         }
 
         // Create url to access hall booking page
-        String url = baseURL + "?event="
-                + hallCode + "&date=" + year + "-" + sMonth + "-" + sDay;
-
-        return url;
+        return baseURL + "?event=" + hallCode + "&date=" + year + "-" + sMonth + "-" + sDay;
     }
 
     /**
@@ -865,7 +863,7 @@ public class DisplayHallInfoActivity extends Activity {
                     .select("table.list td:contains(Date) ~ td").first().text();
             Date theDate = formatPretty.parse(dateBooking);
             String hallType = page.select("h1").first().text();
-            Boolean firstHall = hallType.indexOf("First") != -1 || hallType.indexOf("Cafeteria") != -1;
+            Boolean firstHall = hallType.contains("First") || hallType.contains("Cafeteria");
             Boolean veggie = Integer.parseInt(page
                     .select("table.list td:contains(Vegetarians) ~ td").first()
                     .text()) > 0;
@@ -917,7 +915,7 @@ public class DisplayHallInfoActivity extends Activity {
                             .first().text();
                     Date theDate = formatPretty.parse(date);
                     String hallType = page.select("h1").first().text();
-                    Boolean firstHall = hallType.indexOf("First") != -1 || hallType.indexOf("Cafeteria") != -1;
+                    Boolean firstHall = hallType.contains("First") || hallType.contains("Cafeteria");
                     Boolean veggie = Integer.parseInt(page
                             .select("table.list td:contains(Vegetarians) ~ td")
                             .first().text()) > 0;
@@ -931,7 +929,7 @@ public class DisplayHallInfoActivity extends Activity {
             Set<String> allSettingKeys = globalSettings.getAll().keySet();
 
             for (String key : allSettingKeys) {
-                if (key.indexOf("20") != -1 && !(bookingDates.contains(key))) {
+                if (key.contains("20") && !(bookingDates.contains(key))) {
                     globalSettingsEditor.remove(key);
                 }
             }
@@ -946,7 +944,7 @@ public class DisplayHallInfoActivity extends Activity {
      * Finds the next available date of the given day.
      *
      * @param requiredDay - the day to be found
-     * @return Date - the specific date of the next occurence of {@link requiredDay}
+     * @return Date - the specific date of the next occurrence of {@link requiredDay}
      */
     protected static Date futureDay(int requiredDay) {
         Calendar requiredDate = new GregorianCalendar();
