@@ -843,7 +843,7 @@ public class DisplayHallInfoActivity extends Activity {
         // Connect to the server, find the required link
         String docHtml = netGetData(baseURL);
         Document doc = Jsoup.parse(docHtml);
-        String linkSelector = "table.list tr:contains(" + dateString
+        String linkSelector = "table.table tr:contains(" + dateString
                 + ") a:contains(View/Edit) ";
         Element link = doc.select(linkSelector).first();
 
@@ -860,12 +860,14 @@ public class DisplayHallInfoActivity extends Activity {
 
             // Gather details of the booking
             String dateBooking = page
-                    .select("table.list td:contains(Date) ~ td").first().text();
+                    .select("table.table td:contains(Date) ~ td").first().text();
             Date theDate = formatPretty.parse(dateBooking);
             String hallType = page.select("h1").first().text();
             Boolean firstHall = hallType.contains("First") || hallType.contains("Cafeteria");
+
+            // FIXME: veggie stuff highly likely to be bugged due to multiple table.table in page now :(
             Boolean veggie = Integer.parseInt(page
-                    .select("table.list td:contains(Vegetarians) ~ td").first()
+                    .select("table.table td:contains(Vegetarians) ~ td").first()
                     .text()) > 0;
 
             // Add it to the local settings
@@ -897,7 +899,7 @@ public class DisplayHallInfoActivity extends Activity {
         if (doc == null) {
             return false;
         } else {
-            String linkSelector = "table.list a:contains(View/Edit)";
+            String linkSelector = "table.table a:contains(View/Edit)";
             Elements links = doc.select(linkSelector);
 
             ArrayList<String> bookingDates = new ArrayList<String>();
@@ -911,13 +913,15 @@ public class DisplayHallInfoActivity extends Activity {
                     return false;
                 } else {
                     String date = page
-                            .select("table.list td:contains(Date) ~ td")
+                            .select("table.table td:contains(Date) ~ td")
                             .first().text();
                     Date theDate = formatPretty.parse(date);
                     String hallType = page.select("h1").first().text();
                     Boolean firstHall = hallType.contains("First") || hallType.contains("Cafeteria");
+
+                    // FIXME: veggie stuff highly likely to be bugged due to multiple table.table in page now :(
                     Boolean veggie = Integer.parseInt(page
-                            .select("table.list td:contains(Vegetarians) ~ td")
+                            .select("table.table td:contains(Vegetarians) ~ td")
                             .first().text()) > 0;
                     bookingDates.add(localPutHallBooking(globalSettings,
                             theDate, firstHall, veggie)[0]);
