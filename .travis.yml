@@ -1,7 +1,9 @@
 language: java
 
 # See http://stackoverflow.com/a/14725416
-install: sudo apt-get install -qq --force-yes libgd2-xpm ia32-libs ia32-libs-multiarch
+before_install:
+    - sudo apt-get update -qq
+    - sudo apt-get install -qq --force-yes libgd2-xpm ia32-libs ia32-libs-multiarch
 
 before_script:
     - sudo wget -q http://dl.google.com/android/android-sdk_r22.2.1-linux.tgz
