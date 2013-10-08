@@ -2,7 +2,7 @@ language: java
 before_script:
     - sudo wget -q http://dl.google.com/android/android-sdk_r22.2.1-linux.tgz
     - sudo tar xzvf android-sdk_r22.2.1-linux.tgz > /dev/null
-    - echo y | sudo android-sdk-linux/tools/android -s update sdk --filter android-18,platform-tools,build-tools-18.1 --no-ui
+    - echo y | sudo android-sdk-linux/tools/android -s update sdk --filter android-18,platform-tools,build-tools-18.1.0 --no-ui
     - sudo android-sdk-linux/tools/android -s update project --path . --target "android-18"
     - sudo chmod -R 777 ./*
 
