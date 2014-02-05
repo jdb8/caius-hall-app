@@ -83,7 +83,7 @@ public class DisplayHallInfoActivity extends Activity {
             "EEEE d MMMM yyyy");
 
     // Hall codes for first, formal, cafeteria (saturday first), sunday formal
-    private static final int[] hallCodes = {256, 257, 262, 258};
+    private static final int[] hallCodes = {290, 291, 296, 292};
 
     private static SharedPreferences globalSettings;
     private SharedPreferences.Editor globalSettingsEditor;
